@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/light_white"
+    tools:context=".register.WelcomeActivity">
+
+    <!-- Title: BLOG -->
+    <TextView
+        android:id="@+id/tvBlog"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="BLOG."
+        android:textColor="@android:color/black"
+        android:textSize="42sp"
+        android:textStyle="bold"
+        android:fontFamily="@font/love_ya_like_a_sister"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="80dp"/>
+
+    <!-- Description -->
+    <TextView
+        android:id="@+id/tvDescription"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Share your story\nwith us."
+        android:textAlignment="center"
+        android:textColor="@android:color/black"
+        android:textSize="22sp"
+        android:fontFamily="@font/love_ya_like_a_sister"
+        app:layout_constraintTop_toBottomOf="@id/tvBlog"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="16dp"/>
+
+    <!-- Login Button -->
+    <Button
+        android:id="@+id/login"
+        android:layout_width="220dp"
+        android:layout_height="50dp"
+        android:background="@drawable/button_border_red"
+        android:backgroundTint="@android:color/transparent"
+        android:fontFamily="@font/love_ya_like_a_sister"
+        android:text="Login"
+        android:textColor="@android:color/black"
+        android:textSize="20sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvDescription"
+        android:layout_marginTop="32dp"/>
+
+    <!-- "New Here?" text -->
+    <TextView
+        android:id="@+id/tvNewHere"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="New here?"
+        android:textColor="@android:color/darker_gray"
+        android:textSize="16sp"
+        android:fontFamily="@font/love_ya_like_a_sister"
+        app:layout_constraintTop_toBottomOf="@id/login"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="12dp"/>
+
+    <!-- Register Button -->
+    <Button
+        android:id="@+id/register"
+        android:layout_width="220dp"
+        android:layout_height="50dp"
+        android:background="@drawable/button_border_blue"
+        android:backgroundTint="@android:color/transparent"
+        android:fontFamily="@font/love_ya_like_a_sister"
+        android:text="Register"
+        android:textColor="@android:color/black"
+        android:textSize="20sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvNewHere"
+        android:layout_marginTop="12dp"/>
+
+    <!-- Credit Text -->
+    <TextView
+        android:id="@+id/tvDesignBy"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Design by Bao Thanh"
+        android:textSize="12sp"
+        android:textColor="@android:color/black"
+        android:textAlignment="center"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintVertical_bias="0.95" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>
