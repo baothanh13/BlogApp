@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.google.gms.google.services)
     // Add Kotlin Parcelize plugin if needed
     // alias(libs.plugins.kotlin.parcelize)
 }
@@ -55,6 +56,12 @@ dependencies {
     implementation(libs.material)
     implementation(libs.androidx.activity)
     implementation(libs.androidx.constraintlayout)
+    implementation(libs.firebase.auth)
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play.services.auth)
+    implementation(libs.googleid)
+    implementation(libs.firebase.database)
+    implementation(libs.firebase.storage)
 
     // Add lifecycle dependencies if you're using ViewModel/LiveData
 //    implementation(libs.androidx.lifecycle.viewmodel.ktx)
@@ -67,4 +74,5 @@ dependencies {
     // Add navigation component if needed
     // implementation(libs.androidx.navigation.fragment.ktx)
     // implementation(libs.androidx.navigation.ui.ktx)
+
 }

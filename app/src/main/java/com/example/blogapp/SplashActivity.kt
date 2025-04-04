@@ -6,6 +6,7 @@ import android.os.Handler
 import android.os.Looper
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import com.example.blogapp.register.WelcomeActivity
 
 class SplashActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -14,8 +15,8 @@ class SplashActivity : AppCompatActivity() {
         setContentView(R.layout.activity_splash)
 
         Handler(Looper.getMainLooper()).postDelayed({
-            startActivity(Intent(this, SigninandregistrationActivity::class.java))
+            startActivity(Intent(this, WelcomeActivity::class.java))
             finish() // Đóng SplashActivity
-        }, 60000) // 2000ms = 2 giây
+        }, 6000) // 2000ms = 2 giây
     }
 }
