@@ -5,49 +5,44 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="16dp"
-    android:background="@color/white"
-    tools:context=".AddArticleActivity">
+    android:padding="24dp"
+    android:background="@color/light_white">
 
-    <!-- Header with Back Button -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        app:layout_constraintTop_toTopOf="parent">
+    <!-- Back Button (Top Left) -->
+    <ImageButton
+        android:id="@+id/backButton"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:background="@android:color/transparent"
+        android:src="@drawable/back"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:tint="@color/black" />
 
-        <ImageButton
-            android:id="@+id/backButton"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:background="@android:color/transparent"
-            android:src="@drawable/back"
-            app:tint="@color/blue" />
-
-        <TextView
-            android:id="@+id/headerText"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
-            android:text="Add New Blog Here"
-            android:textColor="@color/blue"
-            android:textSize="20sp"
-            android:fontFamily="@font/montserrat_subrayada"/>
-    </LinearLayout>
-
-    <!-- Blog Title Input -->
+    <!-- Header Title (Below Back Button) -->
     <TextView
-        android:id="@+id/titleLabel"
+        android:id="@+id/headerTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Add New Blog here"
+        android:textColor="@color/blue"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:fontFamily="@font/montserrat_subrayada"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/backButton"
+        android:layout_marginTop="8dp"/>
+
+    <!-- Blog Title Section -->
+    <TextView
+        android:id="@+id/blogTitleLabel"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="24dp"
         android:text="Blog Title"
-        android:textColor="@color/black"
         android:textSize="16sp"
         android:textStyle="bold"
-        app:layout_constraintTop_toBottomOf="@id/backButton"
-        />
+        app:layout_constraintTop_toBottomOf="@id/headerTitle"/>
 
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/titleInputLayout"
@@ -55,28 +50,29 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        app:layout_constraintTop_toBottomOf="@id/titleLabel">
+        app:counterEnabled="true"
+        app:counterMaxLength="100"
+        app:layout_constraintTop_toBottomOf="@id/blogTitleLabel">
 
         <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/titleEditText"
+            android:id="@+id/blogTitleInput"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Please Start Writing Better Git"
+            android:hint="Enter your blog title"
             android:inputType="textCapSentences"
             android:maxLines="1"/>
     </com.google.android.material.textfield.TextInputLayout>
 
-    <!-- Blog Description Input -->
+    <!-- Blog Description Section -->
     <TextView
-        android:id="@+id/descriptionLabel"
+        android:id="@+id/blogDescriptionLabel"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="24dp"
         android:text="Blog Description"
-        android:textColor="@color/black"
         android:textSize="16sp"
         android:textStyle="bold"
-        app:layout_constraintTop_toBottomOf="@id/titleInputLayout" />
+        app:layout_constraintTop_toBottomOf="@id/titleInputLayout"/>
 
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/descriptionInputLayout"
@@ -84,30 +80,33 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_marginTop="8dp"
-        android:layout_marginBottom="16dp"
-        app:layout_constraintBottom_toTopOf="@id/postButton"
-        app:layout_constraintTop_toBottomOf="@id/descriptionLabel">
+        app:counterEnabled="true"
+        app:counterMaxLength="5000"
+        app:layout_constraintBottom_toTopOf="@id/addBlogButton"
+        app:layout_constraintTop_toBottomOf="@id/blogDescriptionLabel">
 
         <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/descriptionEditText"
+            android:id="@+id/blogDescriptionInput"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:gravity="top"
-            android:hint="Recently read a helpful article on Hashnode by Simon..."
+            android:hint="Write your blog content here..."
             android:inputType="textMultiLine"
-            android:minLines="6"/>
+            android:minLines="10"
+            android:maxLines="15"/>
     </com.google.android.material.textfield.TextInputLayout>
 
-    <!-- Post Button -->
+    <!-- Add Blog Button -->
     <Button
-        android:id="@+id/postButton"
+        android:id="@+id/addBlogButton"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
+        android:layout_marginTop="24dp"
         android:backgroundTint="@color/blue"
-        android:text="Post Blog"
-        android:textColor="@color/white"
+        android:text="Add Blog"
+        android:textAllCaps="false"
+        android:textColor="@android:color/white"
         android:textSize="16sp"
-        app:layout_constraintBottom_toBottomOf="parent" />
+        app:layout_constraintBottom_toBottomOf="parent"/>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
