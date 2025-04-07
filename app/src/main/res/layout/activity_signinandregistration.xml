@@ -100,6 +100,7 @@
         android:background="@drawable/edit_text_shape"
         android:ems="10"
         android:gravity="center"
+        android:fontFamily="@font/love_ya_like_a_sister"
         android:hint="Enter Password"
         android:inputType="textPassword"
         android:textColorHint="#80000000"

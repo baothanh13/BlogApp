@@ -9,6 +9,7 @@ import androidx.appcompat.app.AppCompatActivity
 import com.example.blogapp.register.WelcomeActivity
 
 class SplashActivity : AppCompatActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -19,4 +20,6 @@ class SplashActivity : AppCompatActivity() {
             finish() // Đóng SplashActivity
         }, 6000) // 2000ms = 2 giây
     }
+
+
 }

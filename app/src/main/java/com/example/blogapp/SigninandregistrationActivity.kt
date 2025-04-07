@@ -1,5 +1,6 @@
 package com.example.blogapp
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import android.widget.Toast
@@ -39,6 +40,25 @@ class SigninandregistrationActivity : AppCompatActivity() {
             binding.registerButton.isEnabled = false
             binding.profileCard.visibility = View.VISIBLE
             binding.tvNewHere.isEnabled = false
+            binding.loginButton.setOnClickListener {
+                val loginEmail = binding.loginEmailAddress.text.toString()
+                val loginPassword = binding.loginPassword.text.toString()
+                if(loginEmail.isEmpty() || loginPassword.isEmpty()){
+                    Toast.makeText(this, "Please fill all the details", Toast.LENGTH_SHORT).show()
+                }else{
+                    auth.signInWithEmailAndPassword(loginEmail, loginPassword).addOnCompleteListener {task->
+                        if(task.isSuccessful){
+                            Toast.makeText(this, "Login successful", Toast.LENGTH_SHORT).show()
+                            startActivity(Intent(this, MainActivity::class.java))
+                            finish()
+                        }else{
+                            Toast.makeText(this, "Login failed.Please enter correct email and password.}", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+
+
+            }
         } else if (action == "register") {
             // Show registration fields
             binding.editTextTextName.visibility = View.VISIBLE
@@ -57,21 +77,20 @@ class SigninandregistrationActivity : AppCompatActivity() {
                 if (registerPassword.isEmpty() || registerEmail.isEmpty() || registerName.isEmpty()) {
                     Toast.makeText(this, "Please fill all the details", Toast.LENGTH_SHORT).show()
                 } else {
-                    // Initialize Firebase Database
-                    database = FirebaseDatabase.getInstance()
-
-                    auth.createUserWithEmailAndPassword(registerEmail, registerPassword) // Fixed: using password
+                    // Initialize Firebase Database with your specific URL
+                    database = FirebaseDatabase.getInstance("https://blogapp-8582c-default-rtdb.asia-southeast1.firebasedatabase.app/")
+                    auth.createUserWithEmailAndPassword(registerEmail, registerPassword)
                         .addOnCompleteListener { task ->
                             if (task.isSuccessful) {
                                 val user = auth.currentUser
+
                                 user?.let {
                                     val userId = user.uid
-                                    val userData = UserData(registerName, registerEmail) // Store email instead of password
-
-                                    // Save to Realtime Database
-                                    database.getReference("users").child(userId).setValue(userData)
-                                        .addOnCompleteListener { dbTask ->
-                                            if (dbTask.isSuccessful) {
+                                    val userData = UserData(registerName, registerEmail)
+                                    // Use the database instance you initialized with your URL
+                                    database.reference.child("users").child(userId).setValue(userData)
+                                        .addOnCompleteListener { task ->
+                                            if (task.isSuccessful) {
                                                 Toast.makeText(this, "Registration successful", Toast.LENGTH_SHORT).show()
                                                 finish() // Close activity
                                             } else {
