@@ -1,9 +1,11 @@
 package com.example.blogapp.adapter
 
+import android.content.Intent
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.example.blogapp.Model.BlogItemModel
+import com.example.blogapp.ReadMoreActivity
 import com.example.blogapp.databinding.BlogItemBinding
 
 class BlogAdapter(private val items: List<BlogItemModel>) :
@@ -19,7 +21,8 @@ class BlogAdapter(private val items: List<BlogItemModel>) :
     }
 
     override fun onBindViewHolder(holder: BlogViewHolder, position: Int) {
-        holder.bind(items[position])
+        val blogItems = items[position]
+        holder.bind(blogItems)
     }
 
     override fun getItemCount() = items.size
@@ -30,7 +33,7 @@ class BlogAdapter(private val items: List<BlogItemModel>) :
         fun bind(item: BlogItemModel) {
             binding.apply {
                 heading.text = item.heading
-                userName.text = item.userName  // This was missing in your adapter
+                userName.text = item.userName
                 post.text = item.post
                 date.text = item.date
                 likeCount.text = item.likeCount.toString()
@@ -45,13 +48,26 @@ class BlogAdapter(private val items: List<BlogItemModel>) :
                 }
 
                 readmoreButton.setOnClickListener {
-                    // Handle read more click
+                    val context = binding.root.context
+                    val intent = Intent(context, ReadMoreActivity::class.java).apply {
+                        putExtra("blogItem", item) // Use 'item' instead of 'blogItemModel'
+                    }
+                    context.startActivity(intent)
                 }
 
                 // Uncomment when using Glide
                 // Glide.with(root.context)
                 //     .load(item.profileImageUrl)
                 //     .into(profileCard.findViewById(R.id.imageView))
+
+                // Set on click listener for the root view if needed
+                binding.root.setOnClickListener {
+                    val context = binding.root.context
+                    val intent = Intent(context, ReadMoreActivity::class.java).apply {
+                        putExtra("blogItem", item) // Use 'item' instead of 'blogItemModel'
+                    }
+                    context.startActivity(intent)
+                }
             }
         }
     }

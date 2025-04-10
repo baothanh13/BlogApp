@@ -29,6 +29,7 @@ class AddArticleActivity : AppCompatActivity() {
         .getReference("users")
 
     private val auth = FirebaseAuth.getInstance()
+    private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -36,69 +37,87 @@ class AddArticleActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         binding.addBlogButton.setOnClickListener {
-            val title = binding.blogTitleInput.text.toString()
-            val description = binding.blogDescription.editText?.text.toString().trim()
-
-            if (title.isEmpty() || description.isEmpty()) {
-                Toast.makeText(this, "Please fill all the fields", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-
-            // Get current user
-            val user: FirebaseUser? = auth.currentUser
-            if (user != null) {
-                val userId: String = user.uid
-
-                // Fetch user data from Firebase
-                userReference.child(userId).addListenerForSingleValueEvent(object : ValueEventListener {
-                    override fun onDataChange(snapshot: DataSnapshot) {
-                        val userData: UserData? = snapshot.getValue(UserData::class.java)
-                        if (userData == null || userData.name.isEmpty()) {
-                            Toast.makeText(this@AddArticleActivity, "Failed to retrieve user data", Toast.LENGTH_SHORT).show()
-                            return
-                        }
-
-                        val userNameFromDB = userData.name
-                        val currentDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-
-                        val blogItem = BlogItemModel(
-                            heading = title,
-                            post = description,
-                            date = currentDate,
-                            userName = userNameFromDB,
-                            likeCount = 0
-                        )
-
-                        val key = databaseReference.push().key
-                        if (key != null) {
-                            val blogReference = databaseReference.child(key)
-                            blogReference.setValue(blogItem).addOnCompleteListener { task ->
-                                if (task.isSuccessful) {
-                                    Toast.makeText(this@AddArticleActivity, "Blog added successfully", Toast.LENGTH_SHORT).show()
-                                    // Instead of just finishing, navigate back to MainActivity
-                                    val intent = Intent(this@AddArticleActivity, MainActivity::class.java)
-                                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
-                                    startActivity(intent)
-                                    finish()
-                                } else {
-                                    val errorMessage = task.exception?.message ?: "Unknown error"
-                                    Toast.makeText(this@AddArticleActivity, "Failed to add blog: $errorMessage", Toast.LENGTH_LONG).show()
-                                }
-                            }
-                        }
-                    }
-
-                    override fun onCancelled(error: DatabaseError) {
-                        Toast.makeText(this@AddArticleActivity, "Failed to load user data", Toast.LENGTH_SHORT).show()
-                    }
-                })
-            } else {
-                // If user is not authenticated, redirect to sign in
-                Toast.makeText(this, "Please sign in first", Toast.LENGTH_SHORT).show()
-                val intent = Intent(this, SigninandregistrationActivity::class.java)
-                startActivity(intent)
-                finish()
-            }
+            handleAddBlogButtonClick()
         }
+    }
+
+    private fun handleAddBlogButtonClick() {
+        val title = binding.blogTitleInput.text.toString().trim()
+        val description = binding.blogDescription.editText?.text.toString().trim()
+
+        if (title.isEmpty() || description.isEmpty()) {
+            showToast("Please fill all the fields")
+            return
+        }
+
+        val user = auth.currentUser
+        if (user == null) {
+            redirectToSignIn()
+            return
+        }
+
+        fetchUserDataAndPostBlog(user.uid, title, description)
+    }
+
+    private fun fetchUserDataAndPostBlog(userId: String, title: String, description: String) {
+        userReference.child(userId).addListenerForSingleValueEvent(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val userData = snapshot.getValue(UserData::class.java)
+                if (userData?.name.isNullOrEmpty()) {
+                    showToast("Failed to retrieve user data")
+                    return
+                }
+
+                postNewBlog(title, description, userData!!.name)
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                showToast("Failed to load user data: ${error.message}")
+            }
+        })
+    }
+
+    private fun postNewBlog(title: String, description: String, userName: String) {
+        val currentDate = dateFormat.format(Date())
+        val blogItem = BlogItemModel(
+            heading = title,
+            post = description,
+            date = currentDate,
+            userName = userName,
+            likeCount = 0L  // Changed to Long
+        )
+
+        val key = databaseReference.push().key ?: run {
+            showToast("Failed to generate blog ID")
+            return
+        }
+
+        databaseReference.child(key).setValue(blogItem)
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    navigateToMainActivity()
+                } else {
+                    showToast("Failed to add blog: ${task.exception?.message ?: "Unknown error"}")
+                }
+            }
+    }
+
+    private fun navigateToMainActivity() {
+        showToast("Blog added successfully")
+        val intent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+        startActivity(intent)
+        finish()
+    }
+
+    private fun redirectToSignIn() {
+        showToast("Please sign in first")
+        startActivity(Intent(this, SigninandregistrationActivity::class.java))
+        finish()
+    }
+
+    private fun showToast(message: String) {
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
     }
 }
