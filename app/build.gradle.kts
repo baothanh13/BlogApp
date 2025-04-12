@@ -62,6 +62,7 @@ dependencies {
     implementation(libs.googleid)
     implementation(libs.firebase.database)
     implementation(libs.firebase.storage)
+    implementation(libs.generativeai)
 
     // Add lifecycle dependencies if you're using ViewModel/LiveData
 //    implementation(libs.androidx.lifecycle.viewmodel.ktx)

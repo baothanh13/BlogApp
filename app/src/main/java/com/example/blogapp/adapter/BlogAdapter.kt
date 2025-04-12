@@ -26,7 +26,6 @@ class BlogAdapter(private val items: List<BlogItemModel>) :
     }
 
     override fun getItemCount() = items.size
-
     inner class BlogViewHolder(private val binding: BlogItemBinding) :
         RecyclerView.ViewHolder(binding.root) {
 

@@ -14,15 +14,18 @@ class ReadMoreActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         binding = ActivityReadMoreBinding.inflate(layoutInflater)
-        setContentView(binding.root)  // Corrected method name (camelCase)
-
+        setContentView(binding.root)
+        binding.backButton1.setOnClickListener {
+            finish()
+        }
         val blogs = intent.getParcelableExtra<BlogItemModel>("blogItem")
         if (blogs != null) {
             binding.titleText.text = blogs.heading
             binding.userName.text = blogs.userName
-            binding.postText.text = blogs.post  // Make sure this matches your XML id
+            binding.postText.text = blogs.post
             binding.date.text = blogs.date
-            binding.likeCountText.text = blogs.likeCount.toString()
+
+            // Removed likeCountText binding since we're not displaying it anymore
         } else {
             Toast.makeText(this, "Failed to load blog", Toast.LENGTH_SHORT).show()
         }

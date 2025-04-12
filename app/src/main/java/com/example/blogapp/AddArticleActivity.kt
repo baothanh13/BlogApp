@@ -35,7 +35,9 @@ class AddArticleActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContentView(binding.root)
-
+        binding.backButton.setOnClickListener {
+            finish()
+        }
         binding.addBlogButton.setOnClickListener {
             handleAddBlogButtonClick()
         }

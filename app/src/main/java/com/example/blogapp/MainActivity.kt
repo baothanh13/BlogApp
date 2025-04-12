@@ -32,7 +32,9 @@ class MainActivity : AppCompatActivity() {
         auth = FirebaseAuth.getInstance()
         databaseReference = FirebaseDatabase.getInstance("https://blogapp-8582c-default-rtdb.asia-southeast1.firebasedatabase.app")
             .getReference("blogs") // Changed from .reference.child() to .getReference()
-
+        // Set default profile image for all users
+        val profileImageView = binding.imageView2
+        profileImageView.setImageResource(R.drawable.profile1)
         // Initialize RecyclerView and adapter
         val recyclerView: RecyclerView = binding.blogRecyclerView
         blogAdapter = BlogAdapter(blogList) // Initialize the adapter
@@ -45,8 +47,10 @@ class MainActivity : AppCompatActivity() {
                 blogList.clear() // Clear existing data before adding new items
                 for (dataSnapshot in snapshot.children) {
                     val blogItem = dataSnapshot.getValue(BlogItemModel::class.java)
-                    if (blogItem != null) {
-                        blogList.add(blogItem) // Add to the list
+                    blogItem?.let {
+                        // Ensure all blog items have the default profile image
+                        it.profileImageUrl = "default" // Or set to R.drawable.profile1
+                        blogList.add(it)
                     }
                 }
                 //reverse the list
