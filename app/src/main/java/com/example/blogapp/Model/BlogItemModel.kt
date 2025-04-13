@@ -5,37 +5,47 @@ import android.os.Parcelable
 import com.google.firebase.database.IgnoreExtraProperties
 
 @IgnoreExtraProperties
-
 data class BlogItemModel(
         var heading: String? = "",
         var userName: String? = "",
         var post: String? = "",
         var date: String? = "",
-        var likeCount: Long = 0L,  // Changed from String to Long
+        var likeCount: Long = 0L,
+        var liked: Boolean = false,       // Add this
+        var saved: Boolean = false,
         var profileImageUrl: String? = "",
-        var isLiked: Boolean = false,
-        var isSaved: Boolean = false
+        var postID: String? = "",
+        var likedBy: MutableList<String> = mutableListOf()
 ) : Parcelable {
-        // Update the rest of your Parcelable implementation...
 
         constructor(parcel: Parcel) : this(
-                parcel.readString() ?: "",
-                parcel.readString() ?: "",
-                parcel.readString() ?: "",
-                parcel.readString() ?: "",
-                parcel.readLong(),  // Changed from readString()
-                parcel.readString() ?: ""
-        )
+                heading = parcel.readString(),
+                userName = parcel.readString(),
+                post = parcel.readString(),
+                date = parcel.readString(),
+                likeCount = parcel.readLong(),
+                liked = parcel.readByte() != 0.toByte(),
+                saved = parcel.readByte() != 0.toByte(),
+                profileImageUrl = parcel.readString(),
+                postID = parcel.readString()
+        ) {
+                val likedByList = mutableListOf<String>()
+                parcel.readStringList(likedByList)
+                likedBy = likedByList
+        }
 
         override fun writeToParcel(parcel: Parcel, flags: Int) {
                 parcel.writeString(heading)
                 parcel.writeString(userName)
                 parcel.writeString(post)
                 parcel.writeString(date)
-                parcel.writeLong(likeCount)  // Changed from writeString()
+                parcel.writeLong(likeCount)
+
                 parcel.writeString(profileImageUrl)
+                parcel.writeString(postID)
+                parcel.writeStringList(likedBy)
         }
-        // ... rest of your code
+
         override fun describeContents(): Int {
                 return 0
         }
