@@ -18,7 +18,7 @@ class BlogAdapter(private val items: List<BlogItemModel>) :
 
     private val databaseReference: DatabaseReference = FirebaseDatabase
         .getInstance("https://blogapp-8582c-default-rtdb.asia-southeast1.firebasedatabase.app")
-        .reference
+        .reference.child("blogs")
     private val currentUser = FirebaseAuth.getInstance().currentUser
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): BlogViewHolder {
@@ -50,28 +50,19 @@ class BlogAdapter(private val items: List<BlogItemModel>) :
                 date.text = item.date
                 likeCount.text = item.likeCount.toString()
 
-                // Check if user liked the post
+                // Update like button based on current liked state
                 currentUser?.uid?.let { uid ->
-                    if (postID != null) {
-                        databaseReference.child("blogs").child(postID).child("likes").child(uid)
-                            .addListenerForSingleValueEvent(object : ValueEventListener {
-                                override fun onDataChange(snapshot: DataSnapshot) {
-                                    updateLikeButtonImage(binding, snapshot.exists())
-                                }
-
-                                override fun onCancelled(error: DatabaseError) {
-                                    Log.e("BlogAdapter", "Error checking like status", error.toException())
-                                }
-                            })
-                    }
+                    updateLikeButtonImage(binding, item.likes.containsKey(uid))
                 }
 
                 likeButton.setOnClickListener {
-                    if (currentUser != null) {
-                        if (postID != null) {
-                            handleLikeButtonClick(postID, item)
+                    currentUser?.uid?.let { uid ->
+                        if (postID.isNotEmpty()) {
+                            handleLikeButtonClick(postID, adapterPosition, uid)
+                        } else {
+                            Toast.makeText(context, "Invalid post ID", Toast.LENGTH_SHORT).show()
                         }
-                    } else {
+                    } ?: run {
                         Toast.makeText(context, "You need to log in first", Toast.LENGTH_SHORT).show()
                     }
                 }
@@ -90,55 +81,58 @@ class BlogAdapter(private val items: List<BlogItemModel>) :
             }
         }
 
-        private fun handleLikeButtonClick(postID: String, item: BlogItemModel) {
-            val userReference = databaseReference.child("users").child(currentUser!!.uid)
-            val postLikeReference = databaseReference.child("blogs").child(postID).child("likes")
+        private fun handleLikeButtonClick(postID: String, position: Int, userId: String) {
+            val postRef = databaseReference.child(postID)
 
-            postLikeReference.child(currentUser.uid).addListenerForSingleValueEvent(object : ValueEventListener {
-                override fun onDataChange(snapshot: DataSnapshot) {
-                    if (snapshot.exists()) {
-                        // Unlike the post
-                        userReference.child("likes").child(postID).removeValue()
-                            .addOnSuccessListener {
-                                postLikeReference.child(currentUser.uid).removeValue()
-                                item.likedBy.remove(currentUser.uid)
-                                updateLikeCount(postID, item, -1)
-                            }
-                            .addOnFailureListener { e ->
-                                Log.e("BlogAdapter", "Failed to unlike", e)
-                            }
+            postRef.runTransaction(object : Transaction.Handler {
+                override fun doTransaction(currentData: MutableData): Transaction.Result {
+                    val post = currentData.getValue(BlogItemModel::class.java) ?:
+                    return Transaction.success(currentData)
+
+                    // Update likes map
+                    val likes = post.likes.toMutableMap()
+                    val isLiked = likes[userId] ?: false
+
+                    if (isLiked) {
+                        likes.remove(userId)
+                        post.likeCount--
                     } else {
-                        // Like the post
-                        userReference.child("likes").child(postID).setValue(true)
-                            .addOnSuccessListener {
-                                postLikeReference.child(currentUser.uid).setValue(true)
-                                item.likedBy.add(currentUser.uid)
-                                updateLikeCount(postID, item, 1)
+                        likes[userId] = true
+                        post.likeCount++
+                    }
+
+                    post.likes = likes
+                    currentData.value = post
+                    return Transaction.success(currentData)
+                }
+
+                override fun onComplete(error: DatabaseError?, committed: Boolean, snapshot: DataSnapshot?) {
+                    if (error != null) {
+                        Log.e("BlogAdapter", "Like transaction failed", error.toException())
+                    } else if (committed) {
+                        // Update ONLY the specific item at this position
+                        snapshot?.getValue(BlogItemModel::class.java)?.let { updatedPost ->
+                            if (position >= 0 && position < items.size) {
+                                // Get the item at this specific position
+                                val item = items[position]
+
+                                // Only update if the postIDs match to ensure we're updating the right post
+                                if (item.postID == postID) {
+                                    item.likes = updatedPost.likes
+                                    item.likeCount = updatedPost.likeCount
+
+                                    // Update UI on main thread
+                                    binding.root.post {
+                                        binding.likeCount.text = item.likeCount.toString()
+                                        updateLikeButtonImage(binding, item.likes.containsKey(userId))
+                                        notifyItemChanged(position)
+                                    }
+                                }
                             }
-                            .addOnFailureListener { e ->
-                                Log.e("BlogAdapter", "Failed to like", e)
-                            }
+                        }
                     }
                 }
-
-                override fun onCancelled(error: DatabaseError) {
-                    Log.e("BlogAdapter", "Like check cancelled", error.toException())
-                }
             })
-        }
-
-        private fun updateLikeCount(postID: String, item: BlogItemModel, change: Int) {
-            val newLikeCount = item.likeCount + change
-            databaseReference.child("blogs").child(postID).child("likeCount")
-                .setValue(newLikeCount)
-                .addOnSuccessListener {
-                    item.likeCount = newLikeCount
-                    binding.likeCount.text = newLikeCount.toString()
-                    updateLikeButtonImage(binding, change > 0)
-                }
-                .addOnFailureListener { e ->
-                    Log.e("BlogAdapter", "Failed to update like count", e)
-                }
         }
 
         private fun updateLikeButtonImage(binding: BlogItemBinding, liked: Boolean) {

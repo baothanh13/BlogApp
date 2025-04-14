@@ -2,10 +2,10 @@ package com.example.blogapp
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import com.example.blogapp.Model.BlogItemModel
 import com.example.blogapp.adapter.BlogAdapter
 import com.example.blogapp.databinding.ActivityMainBinding
@@ -21,53 +21,106 @@ class MainActivity : AppCompatActivity() {
         ActivityMainBinding.inflate(layoutInflater)
     }
     private lateinit var databaseReference: DatabaseReference
-    private val blogList = mutableListOf<BlogItemModel>() // Renamed from blogItem to avoid confusion
+    private val blogList = mutableListOf<BlogItemModel>()
     private lateinit var auth: FirebaseAuth
-    private lateinit var blogAdapter: BlogAdapter // Declare adapter as a class member
+    private lateinit var blogAdapter: BlogAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(binding.root)
 
+        // Initialize Firebase components
         auth = FirebaseAuth.getInstance()
         databaseReference = FirebaseDatabase.getInstance("https://blogapp-8582c-default-rtdb.asia-southeast1.firebasedatabase.app")
-            .getReference("blogs") // Changed from .reference.child() to .getReference()
-        // Set default profile image for all users
-        val profileImageView = binding.imageView2
-        profileImageView.setImageResource(R.drawable.profile1)
-        // Initialize RecyclerView and adapter
-        val recyclerView: RecyclerView = binding.blogRecyclerView
-        blogAdapter = BlogAdapter(blogList) // Initialize the adapter
-        recyclerView.adapter = blogAdapter
-        recyclerView.layoutManager = LinearLayoutManager(this)
+            .getReference("blogs")
 
-        // Fetch data from Firebase database
+        // Set default profile image
+        binding.imageView2.setImageResource(R.drawable.profile1)
+
+        // Initialize RecyclerView
+        initializeRecyclerView()
+
+        // Fetch blog posts
+        fetchBlogPosts()
+
+        // Set click listeners
+        setupClickListeners()
+    }
+
+    private fun initializeRecyclerView() {
+        blogAdapter = BlogAdapter(blogList)
+        binding.blogRecyclerView.apply {
+            adapter = blogAdapter
+            layoutManager = LinearLayoutManager(this@MainActivity)
+            setHasFixedSize(true)
+        }
+    }
+
+    private fun fetchBlogPosts() {
         databaseReference.addValueEventListener(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
-                blogList.clear() // Clear existing data before adding new items
-                for (dataSnapshot in snapshot.children) {
-                    val blogItem = dataSnapshot.getValue(BlogItemModel::class.java)
-                    blogItem?.let {
-                        // Ensure all blog items have the default profile image
-                        it.profileImageUrl = "default" // Or set to R.drawable.profile1
-                        blogList.add(it)
+                blogList.clear()
+
+                for (postSnapshot in snapshot.children) {
+                    try {
+                        // Check if the snapshot contains an object or primitive value
+                        if (postSnapshot.hasChildren()) {
+                            val blogItem = postSnapshot.getValue(BlogItemModel::class.java)?.apply {
+                                // Ensure postID is set
+                                postID = postSnapshot.key ?: ""
+
+                                // Handle default values
+                                heading = heading ?: "No Title"
+                                userName = userName ?: "Anonymous"
+                                post = post ?: ""
+                                date = date ?: getCurrentDate()
+                                profileImageUrl = profileImageUrl ?: "default"
+
+                                // Ensure likes map is initialized
+                                if (likes == null) {
+                                    likes = hashMapOf()
+                                }
+                            }
+                            blogItem?.let { blogList.add(it) }
+                        } else {
+                            Log.w("MainActivity", "Skipping invalid blog post data at key: ${postSnapshot.key}")
+                        }
+                    } catch (e: Exception) {
+                        Log.e("MainActivity", "Error parsing blog post (${postSnapshot.key})", e)
                     }
                 }
-                //reverse the list
-                blogList.reverse()
-                blogAdapter.notifyDataSetChanged() // Notify adapter of data changes
 
+                // Show newest posts first
+                blogList.reverse()
+                blogAdapter.notifyDataSetChanged()
             }
 
             override fun onCancelled(error: DatabaseError) {
-                Toast.makeText(this@MainActivity, "Blog loading failed", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@MainActivity, "Failed to load posts: ${error.message}", Toast.LENGTH_SHORT).show()
+                Log.e("MainActivity", "Database error: ${error.details}")
             }
         })
+    }
 
+    private fun setupClickListeners() {
         binding.floatingAddArticleButton.setOnClickListener {
-            startActivity(Intent(this, AddArticleActivity::class.java))
-            // Remove finish() to keep MainActivity in the back stack
-            // finish()
+            if (auth.currentUser != null) {
+                startActivity(Intent(this, AddArticleActivity::class.java))
+            } else {
+                Toast.makeText(this, "Please sign in to create a post", Toast.LENGTH_SHORT).show()
+                startActivity(Intent(this, SigninandregistrationActivity::class.java))
+            }
         }
+    }
+
+    private fun getCurrentDate(): String {
+        return java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
+            .format(java.util.Date())
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Refresh data when returning to the activity
+        blogAdapter.notifyDataSetChanged()
     }
 }

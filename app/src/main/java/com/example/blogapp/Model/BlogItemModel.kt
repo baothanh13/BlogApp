@@ -6,32 +6,34 @@ import com.google.firebase.database.IgnoreExtraProperties
 
 @IgnoreExtraProperties
 data class BlogItemModel(
-        var heading: String? = "",
-        var userName: String? = "",
-        var post: String? = "",
-        var date: String? = "",
-        var likeCount: Long = 0L,
-        var liked: Boolean = false,       // Add this
-        var saved: Boolean = false,
-        var profileImageUrl: String? = "",
-        var postID: String? = "",
-        var likedBy: MutableList<String> = mutableListOf()
+        var heading: String = "",
+        var userName: String = "",
+        var post: String = "",
+        var date: String = "",
+        var likeCount: Int = 0,
+        var saved: Boolean = false,  // Removed redundant 'liked' field
+        var profileImageUrl: String = "",
+        var postID: String = "",
+        var likes: MutableMap<String, Boolean> = mutableMapOf()
 ) : Parcelable {
 
         constructor(parcel: Parcel) : this(
-                heading = parcel.readString(),
-                userName = parcel.readString(),
-                post = parcel.readString(),
-                date = parcel.readString(),
-                likeCount = parcel.readLong(),
-                liked = parcel.readByte() != 0.toByte(),
+                heading = parcel.readString() ?: "",
+                userName = parcel.readString() ?: "",
+                post = parcel.readString() ?: "",
+                date = parcel.readString() ?: "",
+                likeCount = parcel.readInt(),
                 saved = parcel.readByte() != 0.toByte(),
-                profileImageUrl = parcel.readString(),
-                postID = parcel.readString()
+                profileImageUrl = parcel.readString() ?: "",
+                postID = parcel.readString() ?: "",
+                likes = mutableMapOf()
         ) {
-                val likedByList = mutableListOf<String>()
-                parcel.readStringList(likedByList)
-                likedBy = likedByList
+                val size = parcel.readInt()
+                repeat(size) {
+                        val key = parcel.readString() ?: ""
+                        val value = parcel.readByte() != 0.toByte()
+                        likes[key] = value
+                }
         }
 
         override fun writeToParcel(parcel: Parcel, flags: Int) {
@@ -39,16 +41,19 @@ data class BlogItemModel(
                 parcel.writeString(userName)
                 parcel.writeString(post)
                 parcel.writeString(date)
-                parcel.writeLong(likeCount)
-
+                parcel.writeInt(likeCount)
+                parcel.writeByte(if (saved) 1 else 0)
                 parcel.writeString(profileImageUrl)
                 parcel.writeString(postID)
-                parcel.writeStringList(likedBy)
+
+                parcel.writeInt(likes.size)
+                likes.forEach { (key, value) ->
+                        parcel.writeString(key)
+                        parcel.writeByte(if (value) 1 else 0)
+                }
         }
 
-        override fun describeContents(): Int {
-                return 0
-        }
+        override fun describeContents(): Int = 0
 
         companion object CREATOR : Parcelable.Creator<BlogItemModel> {
                 override fun createFromParcel(parcel: Parcel): BlogItemModel {
@@ -57,6 +62,20 @@ data class BlogItemModel(
 
                 override fun newArray(size: Int): Array<BlogItemModel?> {
                         return arrayOfNulls(size)
+                }
+        }
+
+        fun isLikedByUser(userId: String): Boolean {
+                return likes[userId] ?: false
+        }
+
+        fun toggleLike(userId: String) {
+                if (likes.containsKey(userId)) {
+                        likes.remove(userId)
+                        likeCount = maxOf(0, likeCount - 1)
+                } else {
+                        likes[userId] = true
+                        likeCount++
                 }
         }
 }

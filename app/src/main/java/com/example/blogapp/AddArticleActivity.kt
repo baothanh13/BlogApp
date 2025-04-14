@@ -9,103 +9,129 @@ import com.example.blogapp.Model.BlogItemModel
 import com.example.blogapp.Model.UserData
 import com.example.blogapp.databinding.ActivityAddArticleBinding
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseUser
-import com.google.firebase.database.*
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.DatabaseReference
+import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ValueEventListener
 import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import java.util.*
 
 class AddArticleActivity : AppCompatActivity() {
-    private val binding: ActivityAddArticleBinding by lazy {
-        ActivityAddArticleBinding.inflate(layoutInflater)
-    }
 
-    private val databaseReference: DatabaseReference = FirebaseDatabase
-        .getInstance("https://blogapp-8582c-default-rtdb.asia-southeast1.firebasedatabase.app")
-        .getReference("blogs")
-
-    private val userReference: DatabaseReference = FirebaseDatabase
-        .getInstance("https://blogapp-8582c-default-rtdb.asia-southeast1.firebasedatabase.app")
-        .getReference("users")
-
-    private val auth = FirebaseAuth.getInstance()
+    private lateinit var binding: ActivityAddArticleBinding
+    private lateinit var auth: FirebaseAuth
+    private lateinit var databaseReference: DatabaseReference
+    private lateinit var userReference: DatabaseReference
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        binding = ActivityAddArticleBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        // Initialize Firebase components
+        auth = FirebaseAuth.getInstance()
+        databaseReference = FirebaseDatabase.getInstance("https://blogapp-8582c-default-rtdb.asia-southeast1.firebasedatabase.app")
+            .getReference("blogs")
+        userReference = FirebaseDatabase.getInstance("https://blogapp-8582c-default-rtdb.asia-southeast1.firebasedatabase.app")
+            .getReference("users")
+
+        setupClickListeners()
+    }
+
+    private fun setupClickListeners() {
         binding.backButton.setOnClickListener {
             finish()
         }
+
         binding.addBlogButton.setOnClickListener {
-            handleAddBlogButtonClick()
+            validateAndPostBlog()
         }
     }
 
-    private fun handleAddBlogButtonClick() {
+    private fun validateAndPostBlog() {
         val title = binding.blogTitleInput.text.toString().trim()
         val description = binding.blogDescription.editText?.text.toString().trim()
 
-        if (title.isEmpty() || description.isEmpty()) {
-            showToast("Please fill all the fields")
-            return
+        when {
+            title.isEmpty() -> {
+                binding.blogTitleInput.error = "Title cannot be empty"
+                return
+            }
+            description.isEmpty() -> {
+                binding.blogDescription.error = "Description cannot be empty"
+                return
+            }
+            auth.currentUser == null -> {
+                redirectToSignIn()
+                return
+            }
+            else -> {
+                fetchUserDataAndPostBlog(title, description)
+            }
         }
-
-        val user = auth.currentUser
-        if (user == null) {
-            redirectToSignIn()
-            return
-        }
-
-        fetchUserDataAndPostBlog(user.uid, title, description)
     }
 
-    private fun fetchUserDataAndPostBlog(userId: String, title: String, description: String) {
+    private fun fetchUserDataAndPostBlog(title: String, description: String) {
+        val userId = auth.currentUser?.uid ?: return
+        showLoading(true)
+
         userReference.child(userId).addListenerForSingleValueEvent(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
-                val userData = snapshot.getValue(UserData::class.java)
-                if (userData?.name.isNullOrEmpty()) {
-                    showToast("Failed to retrieve user data")
+                val userData = snapshot.getValue(UserData::class.java) ?: run {
+                    showToast("User data not found")
+                    showLoading(false)
                     return
                 }
 
-                postNewBlog(title, description, userData!!.name)
+                val userName = userData.name ?: "Anonymous"
+                val profileImageUrl = userData.profileImage ?: "default"
+                postNewBlog(title, description, userName, profileImageUrl)
             }
 
             override fun onCancelled(error: DatabaseError) {
                 showToast("Failed to load user data: ${error.message}")
+                showLoading(false)
             }
         })
     }
 
-    private fun postNewBlog(title: String, description: String, userName: String) {
-        val currentDate = dateFormat.format(Date())
+    private fun postNewBlog(title: String, description: String, userName: String, profileImageUrl: String) {
         val blogItem = BlogItemModel(
             heading = title,
             post = description,
-            date = currentDate,
+            date = dateFormat.format(Date()),
             userName = userName,
-            likeCount = 0L  // Changed to Long
+            likeCount = 0,
+            likes = hashMapOf(), // Initialize empty likes map
+            saved = false,
+            profileImageUrl = profileImageUrl,
+            postID = null.toString(), // Will be set by Firebase
+            //liked = false
         )
 
-        val key = databaseReference.push().key ?: run {
-            showToast("Failed to generate blog ID")
-            return
-        }
+        val newPostRef = databaseReference.push()
+        blogItem.postID = newPostRef.key.toString() // Set the postID before saving
 
-        databaseReference.child(key).setValue(blogItem)
-            .addOnCompleteListener { task ->
-                if (task.isSuccessful) {
-                    navigateToMainActivity()
-                } else {
-                    showToast("Failed to add blog: ${task.exception?.message ?: "Unknown error"}")
-                }
+        newPostRef.setValue(blogItem)
+            .addOnSuccessListener {
+                showToast("Blog posted successfully")
+                navigateToMainActivity()
+            }
+            .addOnFailureListener { e ->
+                showToast("Failed to post blog: ${e.message}")
+                showLoading(false)
             }
     }
 
+    private fun showLoading(loading: Boolean) {
+        binding.addBlogButton.isEnabled = !loading
+        (if (loading) android.view.View.VISIBLE else android.view.View.GONE).also { binding.progressBar.visibility = it }
+    }
+
     private fun navigateToMainActivity() {
-        showToast("Blog added successfully")
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
         }
@@ -114,7 +140,7 @@ class AddArticleActivity : AppCompatActivity() {
     }
 
     private fun redirectToSignIn() {
-        showToast("Please sign in first")
+        showToast("Please sign in to create a blog post")
         startActivity(Intent(this, SigninandregistrationActivity::class.java))
         finish()
     }
