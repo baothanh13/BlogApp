@@ -28,15 +28,12 @@ class BlogAdapter(private var items: MutableList<BlogItemModel>) :
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): BlogViewHolder {
-        val binding = BlogItemBinding.inflate(
-            LayoutInflater.from(parent.context),
-            parent,
-            false
-        )
+        val binding = BlogItemBinding.inflate(LayoutInflater.from(parent.context), parent, false)
         return BlogViewHolder(binding)
     }
 
     override fun onBindViewHolder(holder: BlogViewHolder, position: Int) {
+        Log.d("BlogAdapter", "Binding item at position $position with ID: ${items[position].postID}")
         holder.bind(items[position])
     }
 
@@ -45,9 +42,13 @@ class BlogAdapter(private var items: MutableList<BlogItemModel>) :
     inner class BlogViewHolder(private val binding: BlogItemBinding) :
         RecyclerView.ViewHolder(binding.root) {
 
-        fun bind(item: BlogItemModel) {
-            val context = binding.root.context
+        private val context = binding.root.context
 
+        fun bind(item: BlogItemModel) {
+            Log.d(
+                "BlogViewHolder",
+                "Binding item with ID: ${item.postID} at adapterPosition: $adapterPosition, saved state: ${item.saved}"
+            )
             with(binding) {
                 heading.text = item.heading
                 userName.text = item.userName
@@ -58,14 +59,15 @@ class BlogAdapter(private var items: MutableList<BlogItemModel>) :
                 currentUser?.uid?.let { uid ->
                     updateLikeButtonImage(item.likes[uid] == true)
                 }
-                updateSaveButtonIcon(item.saved) // Ensure initial state is set correctly
+                updateSaveButtonIcon(item.saved)
 
                 likeButton.setOnClickListener {
                     currentUser?.uid?.let { uid ->
-                        if (item.postID.isNotEmpty()) {
-                            handleLikeButtonClick(item.postID, uid)
+                        val position = adapterPosition
+                        if (position != RecyclerView.NO_POSITION && items.isNotEmpty() && position < items.size) {
+                            handleLikeButtonClick(items[position].postID, uid, position)
                         } else {
-                            Toast.makeText(context, "This post has no valid ID", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "Invalid post ID or position", Toast.LENGTH_SHORT).show()
                         }
                     } ?: run {
                         Toast.makeText(context, "You need to log in first", Toast.LENGTH_SHORT).show()
@@ -74,10 +76,11 @@ class BlogAdapter(private var items: MutableList<BlogItemModel>) :
 
                 postsaveButton.setOnClickListener {
                     currentUser?.uid?.let { uid ->
-                        if (item.postID.isNotEmpty()) {
-                            handleSaveButtonClick(item.postID, uid)
+                        val position = adapterPosition
+                        if (position != RecyclerView.NO_POSITION && items.isNotEmpty() && position < items.size) {
+                            handleSaveButtonClick(items[position].postID, uid, position)
                         } else {
-                            Toast.makeText(context, "This post has no valid ID", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "Invalid post ID or position", Toast.LENGTH_SHORT).show()
                         }
                     } ?: run {
                         Toast.makeText(context, "You need to log in first", Toast.LENGTH_SHORT).show()
@@ -98,7 +101,8 @@ class BlogAdapter(private var items: MutableList<BlogItemModel>) :
             }
         }
 
-        private fun handleLikeButtonClick(postID: String, userId: String) {
+        private fun handleLikeButtonClick(postID: String, userId: String, adapterPosition: Int) {
+            Log.d("BlogAdapter", "Like button clicked for post ID: $postID at adapterPosition: $adapterPosition")
             val postRef = databaseReference.child(postID)
             postRef.runTransaction(object : Transaction.Handler {
                 override fun doTransaction(currentData: MutableData): Transaction.Result {
@@ -113,13 +117,12 @@ class BlogAdapter(private var items: MutableList<BlogItemModel>) :
                         Log.e("BlogAdapter", "Like transaction failed", error.toException())
                     } else if (committed) {
                         snapshot?.getValue(BlogItemModel::class.java)?.let { updatedPost ->
-                            val position = adapterPosition
-                            if (position != RecyclerView.NO_POSITION) {
-                                items[position].apply {
+                            if (adapterPosition != RecyclerView.NO_POSITION) {
+                                items[adapterPosition].apply {
                                     likes = updatedPost.likes.toMutableMap()
                                     likeCount = updatedPost.likeCount
                                 }
-                                notifyItemChanged(position)
+                                notifyItemChanged(adapterPosition)
                             }
                         }
                     }
@@ -133,19 +136,17 @@ class BlogAdapter(private var items: MutableList<BlogItemModel>) :
             )
         }
 
-        private fun handleSaveButtonClick(postID: String, uid: String) {
+        private fun handleSaveButtonClick(postID: String, uid: String, adapterPosition: Int) {
             savedPostsRef?.child(postID)?.addListenerForSingleValueEvent(object : ValueEventListener {
                 override fun onDataChange(snapshot: DataSnapshot) {
-                    val context = binding.root.context
-                    val position = adapterPosition
-                    if (position == RecyclerView.NO_POSITION) return
+                    if (adapterPosition == RecyclerView.NO_POSITION) return
 
                     if (snapshot.exists()) {
                         savedPostsRef.child(postID).removeValue()
                             .addOnSuccessListener {
-                                items[position].saved = false // Update the item's state
-                                notifyItemChanged(position)
-                                updateSaveButtonIcon(false)
+                                items[adapterPosition].saved = false
+                                notifyItemChanged(adapterPosition)
+                                updateSaveButtonIcon(false) // Direct UI update
                                 Toast.makeText(context, "Blog unsaved", Toast.LENGTH_SHORT).show()
                             }
                             .addOnFailureListener {
@@ -154,9 +155,9 @@ class BlogAdapter(private var items: MutableList<BlogItemModel>) :
                     } else {
                         savedPostsRef.child(postID).setValue(true)
                             .addOnSuccessListener {
-                                items[position].saved = true // Update the item's state
-                                notifyItemChanged(position)
-                                updateSaveButtonIcon(true)
+                                items[adapterPosition].saved = true
+                                notifyItemChanged(adapterPosition)
+                                updateSaveButtonIcon(true) // Direct UI update
                                 Toast.makeText(context, "Blog saved", Toast.LENGTH_SHORT).show()
                             }
                             .addOnFailureListener {
@@ -166,9 +167,7 @@ class BlogAdapter(private var items: MutableList<BlogItemModel>) :
                 }
 
                 override fun onCancelled(error: DatabaseError) {
-                    binding.root.context?.let {
-                        Toast.makeText(it, "Error: ${error.message}", Toast.LENGTH_SHORT).show()
-                    }
+                    Toast.makeText(context, "Error: ${error.message}", Toast.LENGTH_SHORT).show()
                 }
             })
         }

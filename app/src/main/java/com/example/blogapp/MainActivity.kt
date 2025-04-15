@@ -24,6 +24,9 @@ class MainActivity : AppCompatActivity() {
     private val blogList = mutableListOf<BlogItemModel>()
     private lateinit var auth: FirebaseAuth
     private lateinit var blogAdapter: BlogAdapter
+    private var savedPostIds = mutableSetOf<String>() // Store saved post IDs
+    private val usersRef = FirebaseDatabase.getInstance("https://blogapp-8582c-default-rtdb.asia-southeast1.firebasedatabase.app")
+        .getReference("users")
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -39,6 +42,9 @@ class MainActivity : AppCompatActivity() {
 
         // Initialize RecyclerView
         initializeRecyclerView()
+
+        // Fetch saved posts for the current user
+        fetchSavedPosts()
 
         // Fetch blog posts
         fetchBlogPosts()
@@ -56,6 +62,27 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun fetchSavedPosts() {
+        auth.currentUser?.uid?.let { userId ->
+            usersRef.child(userId).child("savedPosts")
+                .addValueEventListener(object : ValueEventListener {
+                    override fun onDataChange(snapshot: DataSnapshot) {
+                        savedPostIds.clear()
+                        for (postSnapshot in snapshot.children) {
+                            postSnapshot.key?.let { savedPostIds.add(it) }
+                        }
+                        // Re-fetch blog posts to update the saved state
+                        fetchBlogPosts()
+                    }
+
+                    override fun onCancelled(error: DatabaseError) {
+                        Log.e("MainActivity", "Failed to fetch saved posts: ${error.message}")
+                        Toast.makeText(this@MainActivity, "Failed to load saved posts.", Toast.LENGTH_SHORT).show()
+                    }
+                })
+        }
+    }
+
     private fun fetchBlogPosts() {
         databaseReference.addValueEventListener(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
@@ -63,23 +90,19 @@ class MainActivity : AppCompatActivity() {
 
                 for (postSnapshot in snapshot.children) {
                     try {
-                        // Check if the snapshot contains an object or primitive value
                         if (postSnapshot.hasChildren()) {
                             val blogItem = postSnapshot.getValue(BlogItemModel::class.java)?.apply {
-                                // Ensure postID is set
                                 postID = postSnapshot.key ?: ""
-
-                                // Handle default values
                                 heading = heading ?: "No Title"
                                 userName = userName ?: "Anonymous"
                                 post = post ?: ""
                                 date = date ?: getCurrentDate()
                                 profileImageUrl = profileImageUrl ?: "default"
-
-                                // Ensure likes map is initialized
                                 if (likes == null) {
                                     likes = hashMapOf()
                                 }
+                                // Update the saved state based on fetched saved posts
+                                saved = savedPostIds.contains(postID)
                             }
                             blogItem?.let { blogList.add(it) }
                         } else {
@@ -89,8 +112,6 @@ class MainActivity : AppCompatActivity() {
                         Log.e("MainActivity", "Error parsing blog post (${postSnapshot.key})", e)
                     }
                 }
-
-                // Show newest posts first
                 blogList.reverse()
                 blogAdapter.notifyDataSetChanged()
             }
@@ -112,6 +133,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
+
     private fun getCurrentDate(): String {
         return java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
             .format(java.util.Date())
@@ -119,7 +141,6 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        // Refresh data when returning to the activity
-        blogAdapter.notifyDataSetChanged()
+        // No need to notifyDataSetChanged here as ValueEventListeners will handle updates
     }
 }
