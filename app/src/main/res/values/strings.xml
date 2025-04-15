@@ -1,3 +1,5 @@
 <resources>
-    <string name="app_name">Blog App</string>
+    <string name="app_name">Blog App
+    <string name="save_button">Save article</string>
+<string name="like_button">Like article</string></string>
 </resources>

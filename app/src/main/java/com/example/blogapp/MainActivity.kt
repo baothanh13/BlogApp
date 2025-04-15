@@ -112,7 +112,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
-
     private fun getCurrentDate(): String {
         return java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
             .format(java.util.Date())

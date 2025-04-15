@@ -13,13 +13,19 @@ import com.example.blogapp.databinding.BlogItemBinding
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.*
 
-class BlogAdapter(private val items: List<BlogItemModel>) :
+class BlogAdapter(private var items: MutableList<BlogItemModel>) :
     RecyclerView.Adapter<BlogAdapter.BlogViewHolder>() {
 
     private val databaseReference: DatabaseReference = FirebaseDatabase
         .getInstance("https://blogapp-8582c-default-rtdb.asia-southeast1.firebasedatabase.app")
         .reference.child("blogs")
     private val currentUser = FirebaseAuth.getInstance().currentUser
+    private val savedPostsRef: DatabaseReference? = currentUser?.uid?.let {
+        FirebaseDatabase.getInstance("https://blogapp-8582c-default-rtdb.asia-southeast1.firebasedatabase.app")
+            .getReference("users")
+            .child(it)
+            .child("savedPosts")
+    }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): BlogViewHolder {
         val binding = BlogItemBinding.inflate(
@@ -40,7 +46,6 @@ class BlogAdapter(private val items: List<BlogItemModel>) :
         RecyclerView.ViewHolder(binding.root) {
 
         fun bind(item: BlogItemModel) {
-            val postID = item.postID
             val context = binding.root.context
 
             with(binding) {
@@ -50,17 +55,29 @@ class BlogAdapter(private val items: List<BlogItemModel>) :
                 date.text = item.date
                 likeCount.text = item.likeCount.toString()
 
-                // Update like button based on current liked state
                 currentUser?.uid?.let { uid ->
-                    updateLikeButtonImage(binding, item.likes.containsKey(uid))
+                    updateLikeButtonImage(item.likes[uid] == true)
                 }
+                updateSaveButtonIcon(item.saved) // Ensure initial state is set correctly
 
                 likeButton.setOnClickListener {
                     currentUser?.uid?.let { uid ->
-                        if (postID.isNotEmpty()) {
-                            handleLikeButtonClick(postID, adapterPosition, uid)
+                        if (item.postID.isNotEmpty()) {
+                            handleLikeButtonClick(item.postID, uid)
                         } else {
-                            Toast.makeText(context, "Invalid post ID", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "This post has no valid ID", Toast.LENGTH_SHORT).show()
+                        }
+                    } ?: run {
+                        Toast.makeText(context, "You need to log in first", Toast.LENGTH_SHORT).show()
+                    }
+                }
+
+                postsaveButton.setOnClickListener {
+                    currentUser?.uid?.let { uid ->
+                        if (item.postID.isNotEmpty()) {
+                            handleSaveButtonClick(item.postID, uid)
+                        } else {
+                            Toast.makeText(context, "This post has no valid ID", Toast.LENGTH_SHORT).show()
                         }
                     } ?: run {
                         Toast.makeText(context, "You need to log in first", Toast.LENGTH_SHORT).show()
@@ -81,27 +98,12 @@ class BlogAdapter(private val items: List<BlogItemModel>) :
             }
         }
 
-        private fun handleLikeButtonClick(postID: String, position: Int, userId: String) {
+        private fun handleLikeButtonClick(postID: String, userId: String) {
             val postRef = databaseReference.child(postID)
-
             postRef.runTransaction(object : Transaction.Handler {
                 override fun doTransaction(currentData: MutableData): Transaction.Result {
-                    val post = currentData.getValue(BlogItemModel::class.java) ?:
-                    return Transaction.success(currentData)
-
-                    // Update likes map
-                    val likes = post.likes.toMutableMap()
-                    val isLiked = likes[userId] ?: false
-
-                    if (isLiked) {
-                        likes.remove(userId)
-                        post.likeCount--
-                    } else {
-                        likes[userId] = true
-                        post.likeCount++
-                    }
-
-                    post.likes = likes
+                    val post = currentData.getValue(BlogItemModel::class.java) ?: return Transaction.success(currentData)
+                    post.toggleLike(userId)
                     currentData.value = post
                     return Transaction.success(currentData)
                 }
@@ -110,24 +112,14 @@ class BlogAdapter(private val items: List<BlogItemModel>) :
                     if (error != null) {
                         Log.e("BlogAdapter", "Like transaction failed", error.toException())
                     } else if (committed) {
-                        // Update ONLY the specific item at this position
                         snapshot?.getValue(BlogItemModel::class.java)?.let { updatedPost ->
-                            if (position >= 0 && position < items.size) {
-                                // Get the item at this specific position
-                                val item = items[position]
-
-                                // Only update if the postIDs match to ensure we're updating the right post
-                                if (item.postID == postID) {
-                                    item.likes = updatedPost.likes
-                                    item.likeCount = updatedPost.likeCount
-
-                                    // Update UI on main thread
-                                    binding.root.post {
-                                        binding.likeCount.text = item.likeCount.toString()
-                                        updateLikeButtonImage(binding, item.likes.containsKey(userId))
-                                        notifyItemChanged(position)
-                                    }
+                            val position = adapterPosition
+                            if (position != RecyclerView.NO_POSITION) {
+                                items[position].apply {
+                                    likes = updatedPost.likes.toMutableMap()
+                                    likeCount = updatedPost.likeCount
                                 }
+                                notifyItemChanged(position)
                             }
                         }
                     }
@@ -135,10 +127,62 @@ class BlogAdapter(private val items: List<BlogItemModel>) :
             })
         }
 
-        private fun updateLikeButtonImage(binding: BlogItemBinding, liked: Boolean) {
+        private fun updateLikeButtonImage(liked: Boolean) {
             binding.likeButton.setImageResource(
                 if (liked) R.drawable.heart_fill_red else R.drawable.heart_black
             )
         }
+
+        private fun handleSaveButtonClick(postID: String, uid: String) {
+            savedPostsRef?.child(postID)?.addListenerForSingleValueEvent(object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    val context = binding.root.context
+                    val position = adapterPosition
+                    if (position == RecyclerView.NO_POSITION) return
+
+                    if (snapshot.exists()) {
+                        savedPostsRef.child(postID).removeValue()
+                            .addOnSuccessListener {
+                                items[position].saved = false // Update the item's state
+                                notifyItemChanged(position)
+                                updateSaveButtonIcon(false)
+                                Toast.makeText(context, "Blog unsaved", Toast.LENGTH_SHORT).show()
+                            }
+                            .addOnFailureListener {
+                                Toast.makeText(context, "Failed to unsave", Toast.LENGTH_SHORT).show()
+                            }
+                    } else {
+                        savedPostsRef.child(postID).setValue(true)
+                            .addOnSuccessListener {
+                                items[position].saved = true // Update the item's state
+                                notifyItemChanged(position)
+                                updateSaveButtonIcon(true)
+                                Toast.makeText(context, "Blog saved", Toast.LENGTH_SHORT).show()
+                            }
+                            .addOnFailureListener {
+                                Toast.makeText(context, "Failed to save", Toast.LENGTH_SHORT).show()
+                            }
+                    }
+                }
+
+                override fun onCancelled(error: DatabaseError) {
+                    binding.root.context?.let {
+                        Toast.makeText(it, "Error: ${error.message}", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            })
+        }
+
+        private fun updateSaveButtonIcon(isSaved: Boolean) {
+            binding.postsaveButton.setImageResource(
+                if (isSaved) R.drawable.save_articles_fill_red else R.drawable.unsave_articles_black
+            )
+        }
+    }
+
+    fun updateList(newList: List<BlogItemModel>) {
+        items.clear()
+        items.addAll(newList)
+        notifyDataSetChanged()
     }
 }

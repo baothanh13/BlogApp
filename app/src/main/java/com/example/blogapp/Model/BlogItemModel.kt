@@ -11,7 +11,7 @@ data class BlogItemModel(
         var post: String = "",
         var date: String = "",
         var likeCount: Int = 0,
-        var saved: Boolean = false,  // Removed redundant 'liked' field
+        var saved: Boolean = false,
         var profileImageUrl: String = "",
         var postID: String = "",
         var likes: MutableMap<String, Boolean> = mutableMapOf()
@@ -45,7 +45,6 @@ data class BlogItemModel(
                 parcel.writeByte(if (saved) 1 else 0)
                 parcel.writeString(profileImageUrl)
                 parcel.writeString(postID)
-
                 parcel.writeInt(likes.size)
                 likes.forEach { (key, value) ->
                         parcel.writeString(key)
