@@ -132,6 +132,10 @@ class MainActivity : AppCompatActivity() {
                 startActivity(Intent(this, SigninandregistrationActivity::class.java))
             }
         }
+        binding.imageButton.setOnClickListener { // Replace with your actual ImageButton ID!
+            val intent = Intent(this, SavedArticlesActivity::class.java)
+            startActivity(intent)
+        }
     }
 
     private fun getCurrentDate(): String {

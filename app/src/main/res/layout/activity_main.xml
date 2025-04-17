@@ -52,7 +52,7 @@
         app:layout_constraintBottom_toBottomOf="@+id/cardView"
         app:layout_constraintEnd_toStartOf="@+id/cardView"
         app:layout_constraintTop_toTopOf="@+id/cardView"
-        app:srcCompat="@drawable/unsave_articlesl_red" />
+        android:src="@drawable/unsave_articles_black"/>
 
     <!-- Search View -->
     <SearchView

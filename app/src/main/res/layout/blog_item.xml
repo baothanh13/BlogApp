@@ -148,7 +148,6 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:padding="16dp"
                 android:src="@drawable/unsave_articles_black"
-
                 android:clickable="true"
                 android:focusable="true"
        />
