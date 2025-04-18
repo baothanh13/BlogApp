@@ -11,7 +11,8 @@
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="16dp">
+        android:padding="16dp"
+        android:background="#F0F0F0">
 
         <!-- Title Text -->
         <TextView
@@ -59,6 +60,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
                 android:text="New Blog"
+                android:fontFamily="@font/love_ya_like_a_sister"
                 android:textColor="@color/black"
                 android:textSize="12sp"
                 android:textStyle="bold"
@@ -74,6 +76,7 @@
                 android:text="Apr 08 2025"
                 android:textColor="@android:color/darker_gray"
                 android:textSize="10sp"
+
                 app:layout_constraintStart_toStartOf="@id/profileContainer"
                 app:layout_constraintTop_toBottomOf="@id/profileCard"/>
         </androidx.constraintlayout.widget.ConstraintLayout>

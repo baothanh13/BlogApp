@@ -10,6 +10,7 @@ data class BlogItemModel(
         var userName: String = "",
         var post: String = "",
         var date: String = "",
+        val userId: String = "",
         var likeCount: Int = 0,
         var saved: Boolean = false,
         var profileImageUrl: String = "",
@@ -22,6 +23,7 @@ data class BlogItemModel(
                 userName = parcel.readString() ?: "",
                 post = parcel.readString() ?: "",
                 date = parcel.readString() ?: "",
+                userId = parcel.readString() ?: "",
                 likeCount = parcel.readInt(),
                 saved = parcel.readByte() != 0.toByte(),
                 profileImageUrl = parcel.readString() ?: "",
@@ -41,6 +43,7 @@ data class BlogItemModel(
                 parcel.writeString(userName)
                 parcel.writeString(post)
                 parcel.writeString(date)
+                parcel.writeString(userId)
                 parcel.writeInt(likeCount)
                 parcel.writeByte(if (saved) 1 else 0)
                 parcel.writeString(profileImageUrl)
