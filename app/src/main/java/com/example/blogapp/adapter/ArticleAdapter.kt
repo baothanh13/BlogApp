@@ -1,138 +1,158 @@
-package com.example.blogapp.adapter
+    package com.example.blogapp.adapter
 
 
 
-import android.content.Context
+    import android.content.Context
 
-import android.util.Log
+    import android.util.Log
 
-import android.view.LayoutInflater
+    import android.view.LayoutInflater
 
-import android.view.View
+    import android.view.ViewGroup
 
-import android.view.ViewGroup
+    import androidx.recyclerview.widget.RecyclerView
 
-import androidx.recyclerview.widget.RecyclerView
+    import com.example.blogapp.Model.BlogItemModel
 
-import com.example.blogapp.Model.BlogItemModel
+    import com.example.blogapp.databinding.ArticleItemBinding
 
-import com.example.blogapp.databinding.ArticleItemBinding
 
 
+    class ArticleAdapter(
 
-class ArticleAdapter(
+        private val context: Context,
 
-    private val context: Context,
+        private var blogList: List<BlogItemModel>,
 
-    private var blogList: List<BlogItemModel>,
+        private val itemClickListener: OnArticleItemClickListener // Use our custom interface
 
-    private val itemClickListener: OnArticleItemClickListener // Use our custom interface
+    ) : RecyclerView.Adapter<ArticleAdapter.BlogViewHolder>() {
 
-) : RecyclerView.Adapter<ArticleAdapter.BlogViewHolder>() {
 
 
+    // Define a custom click listener interface
 
-// Define a custom click listener interface
+        interface OnArticleItemClickListener {
 
-    interface OnArticleItemClickListener {
+            fun onEditClick(blogItem: BlogItemModel)
 
-        fun onEditClick(blogItem: BlogItemModel)
+            fun onReadmoreClick(blogItem: BlogItemModel)
 
-        fun onReadmoreClick(blogItem: BlogItemModel)
+            fun onDeleteClick(blogItem: BlogItemModel)
 
-        fun onDeleteClick(blogItem: BlogItemModel)
+        }
 
-    }
 
 
+        override fun onCreateViewHolder(
 
-    override fun onCreateViewHolder(
+            parent: ViewGroup,
 
-        parent: ViewGroup,
+            viewType: Int
 
-        viewType: Int
+        ): ArticleAdapter.BlogViewHolder {
 
-    ): ArticleAdapter.BlogViewHolder {
+            val inflater = LayoutInflater.from(parent.context)
 
-        val inflater = LayoutInflater.from(parent.context)
+            val binding = ArticleItemBinding.inflate(inflater, parent, false)
 
-        val binding = ArticleItemBinding.inflate(inflater, parent, false)
+            return BlogViewHolder(binding)
 
-        return BlogViewHolder(binding)
+        }
 
-    }
 
 
+        override fun onBindViewHolder(holder: ArticleAdapter.BlogViewHolder, position: Int) {
 
-    override fun onBindViewHolder(holder: ArticleAdapter.BlogViewHolder, position: Int) {
+            val blogItem = blogList[position]
 
-        val blogItem = blogList[position]
+            holder.bind(blogItem)
 
-        holder.bind(blogItem)
+        }
 
-    }
 
 
+        override fun getItemCount(): Int {
 
-    override fun getItemCount(): Int {
+            return blogList.size
 
-        return blogList.size
+        }
 
-    }
 
 
+        fun setData(blogSavedList: MutableList<BlogItemModel>) {
 
-    fun setData(blogSavedList: ArrayList<BlogItemModel>) {
+            this.blogList = blogSavedList
 
-        this.blogList = blogSavedList
+            notifyDataSetChanged()
 
-        notifyDataSetChanged()
+        }
 
-    }
 
 
+        inner class BlogViewHolder(private val binding: ArticleItemBinding) :
 
-    inner class BlogViewHolder(private val binding: ArticleItemBinding) :
+            RecyclerView.ViewHolder(binding.root) {
 
-        RecyclerView.ViewHolder(binding.root) {
 
 
+            init {
 
-        init {
+    // Set click listeners on the buttons
 
-// Set click listeners on the buttons
+                binding.readMoreButton.setOnClickListener { // Assuming "readMoreButton" is the correct ID
 
-            binding.readMoreButton.setOnClickListener { // Assuming "readMoreButton" is the correct ID
+                    val position = adapterPosition
 
-                val position = adapterPosition
+                    if (position != RecyclerView.NO_POSITION) {
 
-                if (position != RecyclerView.NO_POSITION) {
+                        itemClickListener.onReadmoreClick(blogList[position])
 
-                    itemClickListener.onReadmoreClick(blogList[position])
+                    }
+
+                }
+
+                binding.editButton.setOnClickListener { // Assuming "editButton" is the correct ID
+
+                    val position = adapterPosition
+
+                    if (position != RecyclerView.NO_POSITION) {
+
+                        itemClickListener.onEditClick(blogList[position])
+
+                    }
+
+                }
+
+                binding.deleteButton.setOnClickListener { // Assuming "deleteButton" is the correct ID
+
+                    val position = adapterPosition
+
+                    if (position != RecyclerView.NO_POSITION) {
+
+                        itemClickListener.onDeleteClick(blogList[position])
+
+                    }
 
                 }
 
             }
 
-            binding.editButton.setOnClickListener { // Assuming "editButton" is the correct ID
 
-                val position = adapterPosition
 
-                if (position != RecyclerView.NO_POSITION) {
+            fun bind(item: BlogItemModel) {
 
-                    itemClickListener.onEditClick(blogList[position])
+                Log.d("BlogViewHolder", "Binding item with ID: ${item.postID}")
 
-                }
+                with(binding) {
 
-            }
+                    titleTextView.text = item.heading
 
-            binding.deleteButton.setOnClickListener { // Assuming "deleteButton" is the correct ID
+                    summaryTextView.text = item.post
 
-                val position = adapterPosition
+                    bloggerTypeTextView.text = item.userName
 
-                if (position != RecyclerView.NO_POSITION) {
-
-                    itemClickListener.onDeleteClick(blogList[position])
+                    dateTextView.text = item.date
 
                 }
 
@@ -142,36 +162,14 @@ class ArticleAdapter(
 
 
 
-        fun bind(item: BlogItemModel) {
+    // Function to update the data in the adapter
 
-            Log.d("BlogViewHolder", "Binding item with ID: ${item.postID}")
+        fun updateList(newList: List<BlogItemModel>) {
 
-            with(binding) {
+            blogList = newList
 
-                titleTextView.text = item.heading
-
-                summaryTextView.text = item.post
-
-                bloggerTypeTextView.text = item.userName
-
-                dateTextView.text = item.date
-
-            }
+            notifyDataSetChanged()
 
         }
 
     }
-
-
-
-// Function to update the data in the adapter
-
-    fun updateList(newList: List<BlogItemModel>) {
-
-        blogList = newList
-
-        notifyDataSetChanged()
-
-    }
-
-}
