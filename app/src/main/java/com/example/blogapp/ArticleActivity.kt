@@ -27,7 +27,6 @@ class ArticleActivity : AppCompatActivity(), ArticleAdapter.OnArticleItemClickLi
     private lateinit var databaseReference: DatabaseReference
     private val auth = FirebaseAuth.getInstance()
     private lateinit var blogAdapter: ArticleAdapter
-    private val blogSavedList: ArrayList<BlogItemModel> = ArrayList()
     private val blogList: MutableList<BlogItemModel> = mutableListOf()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -40,91 +39,132 @@ class ArticleActivity : AppCompatActivity(), ArticleAdapter.OnArticleItemClickLi
             insets
         }
 
+        // Initialize RecyclerView
         val recyclerView = binding.articleRecyclerView
         recyclerView.layoutManager = LinearLayoutManager(this)
-
-        blogAdapter = ArticleAdapter(this, blogSavedList, this)
+        blogAdapter = ArticleAdapter(this, ArrayList(), this)
         recyclerView.adapter = blogAdapter
 
-        fetchMyArticles()
+        // Check if we should show user's created articles or saved articles
+        val showCreatedArticles = intent.getBooleanExtra("SHOW_CREATED_ARTICLES", false)
+
+//        if (showCreatedArticles) {
+//            binding.titleTextView.text = "Your Articles"
+//            fetchCreatedArticles()
+//        } else {
+//            binding.titleTextView.text = "Saved Articles"
+//            fetchSavedArticles()
+//        }
     }
 
-    private fun fetchMyArticles() {
+    private fun fetchCreatedArticles() {
         val currentUserId = auth.currentUser?.uid
         if (currentUserId == null) {
             Toast.makeText(this, "Not authenticated", Toast.LENGTH_SHORT).show()
-            return // Or redirect to login
+            return
         }
 
-        val myPostsRef = FirebaseDatabase
-            .getInstance("https://blogapp-8582c-default-rtdb.asia-southeast1.firebasedatabase.app")
-            .getReference("users")
-            .child(currentUserId)
-            .child("myPosts")  // *** Changed to "myPosts" ***
-
-        myPostsRef.addListenerForSingleValueEvent(object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                val myPostIds = mutableListOf<String>()
-                for (postKeySnapshot in snapshot.children) {
-                    val postId = postKeySnapshot.key
-                    if (postId != null) {
-                        myPostIds.add(postId)
-                    }
-                }
-                Log.d("ArticleActivity", "User's created post IDs: $myPostIds") // Updated log message
-                fetchAllBlogPosts(myPostIds)
-            }
-
-            override fun onCancelled(error: DatabaseError) {
-                Log.e("ArticleActivity", "Error fetching user's created post IDs: ${error.message}") // Updated log message
-            }
-        })
-    }
-
-    private fun fetchAllBlogPosts(myPostIds: List<String>) {
         databaseReference = FirebaseDatabase
             .getInstance("https://blogapp-8582c-default-rtdb.asia-southeast1.firebasedatabase.app")
             .reference.child("blogs")
 
-        databaseReference.addValueEventListener(object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                blogList.clear()
-                Log.d("ArticleActivity", "All blogs onDataChange called")
-
-                for (postSnapshot in snapshot.children) {
-                    val blogItem = postSnapshot.getValue(BlogItemModel::class.java)
-                    if (blogItem != null) {
-                        blogItem.postID = postSnapshot.key.toString()
-                        if (myPostIds.contains(blogItem.postID)) {
+        // Query for posts where current user is the author
+        databaseReference.orderByChild("authorId").equalTo(currentUserId)
+            .addValueEventListener(object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    blogList.clear()
+                    for (postSnapshot in snapshot.children) {
+                        val blogItem = postSnapshot.getValue(BlogItemModel::class.java)
+                        if (blogItem != null) {
+                            blogItem.postID = postSnapshot.key ?: ""
                             blogList.add(blogItem)
-                            Log.d("ArticleActivity", "  Added post: ${blogItem.heading}")
-                        } else {
-                            Log.d("ArticleActivity", "  Skipping post: ${blogItem.heading} (ID: ${blogItem.postID})")
+                            Log.d("ArticleActivity", "Added created post: ${blogItem.heading}")
                         }
-                    } else {
-                        Log.w("ArticleActivity", "  blogItem is null")
                     }
+                    blogAdapter.setData(ArrayList(blogList))
                 }
 
-                Log.d("ArticleActivity", "Final list size: ${blogList.size}")
-                blogAdapter.setData(blogList as ArrayList<BlogItemModel>)
+                override fun onCancelled(error: DatabaseError) {
+                    Toast.makeText(this@ArticleActivity, "Failed to load articles", Toast.LENGTH_SHORT).show()
+                    Log.e("ArticleActivity", "Error fetching created articles: ${error.message}")
+                }
+            })
+    }
+
+    private fun fetchSavedArticles() {
+        val currentUserId = auth.currentUser?.uid
+        if (currentUserId == null) {
+            Toast.makeText(this, "Not authenticated", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val userSavedPostsRef = FirebaseDatabase
+            .getInstance("https://blogapp-8582c-default-rtdb.asia-southeast1.firebasedatabase.app")
+            .getReference("users")
+            .child(currentUserId)
+            .child("savedPosts")
+
+        userSavedPostsRef.addListenerForSingleValueEvent(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val savedPostIds = mutableListOf<String>()
+                for (postSnapshot in snapshot.children) {
+                    postSnapshot.key?.let { savedPostIds.add(it) }
+                }
+                fetchPostsByIds(savedPostIds)
             }
 
             override fun onCancelled(error: DatabaseError) {
-                Log.e("ArticleActivity", "Error fetching all blogs: ${error.message}")
+                Toast.makeText(this@ArticleActivity, "Failed to load saved posts", Toast.LENGTH_SHORT).show()
+                Log.e("ArticleActivity", "Error fetching saved post IDs: ${error.message}")
+            }
+        })
+    }
+
+    private fun fetchPostsByIds(postIds: List<String>) {
+        if (postIds.isEmpty()) {
+            blogAdapter.setData(ArrayList())
+            return
+        }
+
+        databaseReference = FirebaseDatabase
+            .getInstance("https://blogapp-8582c-default-rtdb.asia-southeast1.firebasedatabase.app")
+            .reference.child("blogs")
+
+        databaseReference.addListenerForSingleValueEvent(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                blogList.clear()
+                for (postSnapshot in snapshot.children) {
+                    val postId = postSnapshot.key ?: continue
+                    if (postIds.contains(postId)) {
+                        val blogItem = postSnapshot.getValue(BlogItemModel::class.java)
+                        if (blogItem != null) {
+                            blogItem.postID = postId
+                            blogList.add(blogItem)
+                        }
+                    }
+                }
+                blogAdapter.setData(ArrayList(blogList))
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                Toast.makeText(this@ArticleActivity, "Failed to load posts", Toast.LENGTH_SHORT).show()
+                Log.e("ArticleActivity", "Error fetching posts by IDs: ${error.message}")
             }
         })
     }
 
     override fun onEditClick(blogItem: BlogItemModel) {
-        // Implement edit functionality here
+        // Implement edit functionality
+        Toast.makeText(this, "Edit: ${blogItem.heading}", Toast.LENGTH_SHORT).show()
     }
 
     override fun onReadmoreClick(blogItem: BlogItemModel) {
-        // Implement read more functionality here
+        // Implement read more functionality
+        Toast.makeText(this, "Read more: ${blogItem.heading}", Toast.LENGTH_SHORT).show()
     }
 
     override fun onDeleteClick(blogItem: BlogItemModel) {
-        // Implement delete functionality here
+        // Implement delete functionality
+        Toast.makeText(this, "Delete: ${blogItem.heading}", Toast.LENGTH_SHORT).show()
     }
 }

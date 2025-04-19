@@ -36,7 +36,10 @@ class ProfileActivity : AppCompatActivity() {
 
         //to go to your articles page
         binding.articlesButton.setOnClickListener {
-            val intent = Intent(this, ArticleActivity::class.java)
+            val intent = Intent(this, ArticleActivity::class.java).apply {
+                putExtra("SHOW_CREATED_ARTICLES", true) // Flag to indicate we want user's articles
+                putExtra("USER_ID", auth.currentUser?.uid) // Pass current user ID
+            }
             startActivity(intent)
         }
 

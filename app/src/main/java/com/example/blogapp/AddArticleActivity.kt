@@ -31,14 +31,15 @@ class AddArticleActivity : AppCompatActivity() {
         binding = ActivityAddArticleBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Initialize Firebase components
-        auth = FirebaseAuth.getInstance()
-        databaseReference = FirebaseDatabase.getInstance("https://blogapp-8582c-default-rtdb.asia-southeast1.firebasedatabase.app")
-            .getReference("blogs")
-        userReference = FirebaseDatabase.getInstance("https://blogapp-8582c-default-rtdb.asia-southeast1.firebasedatabase.app")
-            .getReference("users")
-
+        initializeFirebase()
         setupClickListeners()
+    }
+
+    private fun initializeFirebase() {
+        auth = FirebaseAuth.getInstance()
+        val database = FirebaseDatabase.getInstance("https://blogapp-8582c-default-rtdb.asia-southeast1.firebasedatabase.app")
+        databaseReference = database.getReference("blogs")
+        userReference = database.getReference("users")
     }
 
     private fun setupClickListeners() {
@@ -58,10 +59,12 @@ class AddArticleActivity : AppCompatActivity() {
         when {
             title.isEmpty() -> {
                 binding.blogTitleInput.error = "Title cannot be empty"
+                binding.blogTitleInput.requestFocus()
                 return
             }
             description.isEmpty() -> {
                 binding.blogDescription.error = "Description cannot be empty"
+                binding.blogDescription.requestFocus()
                 return
             }
             auth.currentUser == null -> {
@@ -81,61 +84,61 @@ class AddArticleActivity : AppCompatActivity() {
         userReference.child(userId).addListenerForSingleValueEvent(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 val userData = snapshot.getValue(UserData::class.java) ?: run {
-                    showToast("User data not found")
-                    showLoading(false)
+                    showError("User data not found")
                     return
                 }
 
                 val userName = userData.name ?: "Anonymous"
-                val profileImageUrl = userData.profileImage ?: "default"
+                val profileImageUrl = userData.profileImage ?: ""
                 postNewBlog(title, description, userName, profileImageUrl)
             }
 
             override fun onCancelled(error: DatabaseError) {
-                showToast("Failed to load user data: ${error.message}")
-                showLoading(false)
+                showError("Failed to load user data: ${error.message}")
             }
         })
     }
 
     private fun postNewBlog(title: String, description: String, userName: String, profileImageUrl: String) {
+        val currentDate = dateFormat.format(Date())
+        val currentUserId = auth.currentUser?.uid ?: ""
+
         val blogItem = BlogItemModel(
+            postID = "", // Will be set by Firebase
             heading = title,
             post = description,
-            date = dateFormat.format(Date()),
             userName = userName,
+            date = currentDate,
+            authorId = currentUserId, // Important for filtering user's articles
             likeCount = 0,
-            likes = hashMapOf(), // Initialize empty likes map
+            likes = hashMapOf(),
             saved = false,
-            profileImageUrl = profileImageUrl,
-            postID = null.toString(), // Will be set by Firebase
-            //liked = false
+            profileImageUrl = profileImageUrl
+            // Removed stability parameter as it's not in your BlogItemModel
         )
 
         val newPostRef = databaseReference.push()
-        blogItem.postID = newPostRef.key.toString() // Set the postID before saving
+        blogItem.postID = newPostRef.key ?: "" // Set the generated postID
 
         newPostRef.setValue(blogItem)
             .addOnSuccessListener {
-                showToast("Blog posted successfully")
+                showSuccess("Blog posted successfully")
                 navigateToMainActivity()
             }
             .addOnFailureListener { e ->
-                showToast("Failed to post blog: ${e.message}")
-                showLoading(false)
+                showError("Failed to post blog: ${e.message}")
             }
     }
 
     private fun showLoading(loading: Boolean) {
         binding.addBlogButton.isEnabled = !loading
-        (if (loading) android.view.View.VISIBLE else android.view.View.GONE).also { binding.progressBar.visibility = it }
+        binding.progressBar.visibility = if (loading) android.view.View.VISIBLE else android.view.View.GONE
     }
 
     private fun navigateToMainActivity() {
-        val intent = Intent(this, MainActivity::class.java).apply {
+        startActivity(Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
-        }
-        startActivity(intent)
+        })
         finish()
     }
 
@@ -147,5 +150,15 @@ class AddArticleActivity : AppCompatActivity() {
 
     private fun showToast(message: String) {
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+    }
+
+    private fun showError(message: String) {
+        showToast(message)
+        showLoading(false)
+    }
+
+    private fun showSuccess(message: String) {
+        showToast(message)
+        showLoading(false)
     }
 }
