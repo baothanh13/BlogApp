@@ -30,8 +30,7 @@ class SavedArticlesActivity : AppCompatActivity() {
     }
 
     private fun setupUI() {
-        blogAdapter = BlogAdapter(savedBlogArticles)
-
+        blogAdapter = BlogAdapter(mutableListOf())
         binding.apply {
             savedArticlesRecyclerView.apply {
                 layoutManager = LinearLayoutManager(this@SavedArticlesActivity)
@@ -77,9 +76,7 @@ class SavedArticlesActivity : AppCompatActivity() {
                     val tempList = mutableListOf<BlogItemModel>()
 
                     postIds.forEach { postId ->
-                        // Try both with and without leading dash
                         val postData = snapshot.child(postId).getValue(BlogItemModel::class.java)
-                            ?: snapshot.child(postId.removePrefix("-")).getValue(BlogItemModel::class.java)
 
                         postData?.let {
                             it.postID = postId
@@ -89,10 +86,11 @@ class SavedArticlesActivity : AppCompatActivity() {
                         } ?: Log.w("SavedPosts", "Post not found for ID: $postId")
                     }
 
+
                     runOnUiThread {
                         savedBlogArticles.clear()
                         savedBlogArticles.addAll(tempList)
-
+                        Log.d("SavedPosts", "TEMP LIST SIZE = ${tempList.size}") // 👈 Thêm dòng này
                         if (savedBlogArticles.isEmpty()) {
                             showEmptyState()
                         } else {

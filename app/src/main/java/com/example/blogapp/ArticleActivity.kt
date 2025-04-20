@@ -48,13 +48,13 @@ class ArticleActivity : AppCompatActivity(), ArticleAdapter.OnArticleItemClickLi
         // Check if we should show user's created articles or saved articles
         val showCreatedArticles = intent.getBooleanExtra("SHOW_CREATED_ARTICLES", false)
 
-//        if (showCreatedArticles) {
-//            binding.titleTextView.text = "Your Articles"
-//            fetchCreatedArticles()
-//        } else {
-//            binding.titleTextView.text = "Saved Articles"
-//            fetchSavedArticles()
-//        }
+        if (showCreatedArticles) {
+            binding.titleTextView.text = "Your Articles"
+            fetchCreatedArticles()
+        } else {
+            binding.titleTextView.text = "Saved Articles"
+            fetchSavedArticles()
+        }
     }
 
     private fun fetchCreatedArticles() {
