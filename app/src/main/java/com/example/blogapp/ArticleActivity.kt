@@ -1,5 +1,6 @@
 package com.example.blogapp
 
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
@@ -8,7 +9,6 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import com.example.blogapp.adapter.ArticleAdapter
 import com.example.blogapp.Model.BlogItemModel
 import com.example.blogapp.databinding.ActivityArticleBinding
@@ -27,6 +27,7 @@ class ArticleActivity : AppCompatActivity(), ArticleAdapter.OnArticleItemClickLi
     private lateinit var databaseReference: DatabaseReference
     private val auth = FirebaseAuth.getInstance()
     private lateinit var blogAdapter: ArticleAdapter
+    private val EDIT_BLOG_REQUEST_CODE = 123
     private val blogList: MutableList<BlogItemModel> = mutableListOf()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -37,6 +38,11 @@ class ArticleActivity : AppCompatActivity(), ArticleAdapter.OnArticleItemClickLi
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
+        }
+
+        // Set up back button
+        binding.backButton.setOnClickListener {
+            navigateBackToProfile()
         }
 
         // Initialize RecyclerView
@@ -55,6 +61,26 @@ class ArticleActivity : AppCompatActivity(), ArticleAdapter.OnArticleItemClickLi
             binding.titleTextView.text = "Saved Articles"
             fetchSavedArticles()
         }
+    }
+
+    private fun navigateBackToProfile() {
+        // Check if we came from ProfileActivity (showing created articles)
+        if (intent.getBooleanExtra("SHOW_CREATED_ARTICLES", false)) {
+            // Go back to ProfileActivity
+            val intent = Intent(this, ProfileActivity::class.java)
+            intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            startActivity(intent)
+            finish()
+        } else {
+            // Default back behavior: go to the previous activity in the stack
+            finish()
+        }
+    }
+
+    // Handle system back button press
+    override fun onBackPressed() {
+        navigateBackToProfile()
+        super.onBackPressed() // Call the superclass implementation
     }
 
     private fun fetchCreatedArticles() {
@@ -156,15 +182,47 @@ class ArticleActivity : AppCompatActivity(), ArticleAdapter.OnArticleItemClickLi
     override fun onEditClick(blogItem: BlogItemModel) {
         // Implement edit functionality
         Toast.makeText(this, "Edit: ${blogItem.heading}", Toast.LENGTH_SHORT).show()
+        val intent = Intent(this, EditBlogActivity::class.java)
+        intent.putExtra("blogItem", blogItem)
+        startActivityForResult(intent,EDIT_BLOG_REQUEST_CODE)
     }
 
     override fun onReadmoreClick(blogItem: BlogItemModel) {
-        // Implement read more functionality
         Toast.makeText(this, "Read more: ${blogItem.heading}", Toast.LENGTH_SHORT).show()
+            val intent = Intent(this, ReadMoreActivity::class.java)
+            intent.putExtra("blogItem", blogItem)
+            startActivity(intent)
     }
 
     override fun onDeleteClick(blogItem: BlogItemModel) {
-        // Implement delete functionality
-        Toast.makeText(this, "Delete: ${blogItem.heading}", Toast.LENGTH_SHORT).show()
+        deletePost(blogItem)
+    }
+
+    private fun deletePost(blogItem: BlogItemModel) {
+        val postId = blogItem.postID
+        if (postId.isNotEmpty()) {
+            databaseReference = FirebaseDatabase
+                .getInstance("https://blogapp-8582c-default-rtdb.asia-southeast1.firebasedatabase.app")
+                .reference.child("blogs")
+                .child(postId)
+
+            databaseReference.removeValue()
+                .addOnSuccessListener {
+                    Toast.makeText(this, "Post deleted successfully", Toast.LENGTH_SHORT).show()
+                    // Refresh the list of articles
+                    val showCreatedArticles = intent.getBooleanExtra("SHOW_CREATED_ARTICLES", false)
+                    if (showCreatedArticles) {
+                        fetchCreatedArticles()
+                    } else {
+                        fetchSavedArticles()
+                    }
+                }
+                .addOnFailureListener { error ->
+                    Toast.makeText(this, "Failed to delete post: ${error.message}", Toast.LENGTH_SHORT).show()
+                    Log.e("ArticleActivity", "Error deleting post: ${error.message}")
+                }
+        } else {
+            Toast.makeText(this, "Error: Post ID is invalid", Toast.LENGTH_SHORT).show()
+        }
     }
 }
