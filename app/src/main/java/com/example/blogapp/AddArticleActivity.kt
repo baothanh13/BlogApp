@@ -88,7 +88,8 @@ class AddArticleActivity : AppCompatActivity() {
                     return
                 }
 
-                val userName = userData.name ?: "Anonymous"
+                // Prioritize userData.name, then try auth.currentUser?.displayName
+                val userName = userData.name.takeIf { it.isNotEmpty() } ?: auth.currentUser?.displayName ?: "Anonymous"
                 val profileImageUrl = userData.profileImage ?: ""
                 postNewBlog(title, description, userName, profileImageUrl)
             }

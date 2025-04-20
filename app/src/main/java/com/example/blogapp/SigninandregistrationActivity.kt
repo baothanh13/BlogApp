@@ -133,9 +133,14 @@ class SigninandregistrationActivity : AppCompatActivity() {
                     if (snapshot.exists()) {
                         onSuccess()
                     } else {
+                        // User data doesn't exist yet, let's try to create it with available info
+                        val nameFromAuth = user.displayName
+                        val emailFromAuth = user.email ?: ""
+                        val initialName = nameFromAuth ?: "User" // Fallback to "User" if no display name
+
                         val userData = UserData(
-                            name = user.displayName ?: "User",
-                            email = user.email ?: "",
+                            name = initialName,
+                            email = emailFromAuth,
                             profileImage = ""
                         )
                         database.reference.child("users").child(user.uid)
