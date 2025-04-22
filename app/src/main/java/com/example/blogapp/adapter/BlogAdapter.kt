@@ -27,7 +27,6 @@ class BlogAdapter(private val items: MutableList<BlogItemModel>) :
             .child("savedPosts")
     }
 
-    // Add item click listener interface
     interface OnItemClickListener {
         fun onItemClick(postId: String)
     }
@@ -98,9 +97,6 @@ class BlogAdapter(private val items: MutableList<BlogItemModel>) :
 
                 root.setOnClickListener {
                     itemClickListener?.onItemClick(item.postID)
-                    context.startActivity(Intent(context, ReadMoreActivity::class.java).apply {
-                        putExtra("blogItem", item)
-                    })
                 }
             }
         }
@@ -152,6 +148,11 @@ class BlogAdapter(private val items: MutableList<BlogItemModel>) :
                 Log.w("BlogAdapter", "Save button click: position is NO_POSITION, returning")
                 return
             }
+
+            // Optimistic UI update: Change the icon immediately
+            items[position].saved = !items[position].saved
+            updateSaveButtonIcon(items[position].saved)
+
             savedPostsRef?.child(postID)?.addListenerForSingleValueEvent(object : ValueEventListener {
                 override fun onDataChange(snapshot: DataSnapshot) {
                     Log.d("BlogAdapter", "Save transaction onDataChange: postID=$postID, position=$position")
@@ -160,29 +161,34 @@ class BlogAdapter(private val items: MutableList<BlogItemModel>) :
                         return
                     }
 
-                    val isSaved = snapshot.exists()
-                    Log.d("BlogAdapter", "Save transaction onDataChange: isSaved=$isSaved")
-                    val operation = if (isSaved) {
+                    val isSavedInFirebase = snapshot.exists()
+                    val shouldBeSavedInFirebase = items[position].saved
+
+                    Log.d("BlogAdapter", "Save transaction onDataChange: isSavedInFirebase=$isSavedInFirebase, shouldBeSavedInFirebase=$shouldBeSavedInFirebase")
+
+                    val operation = if (isSavedInFirebase && !shouldBeSavedInFirebase) {
                         savedPostsRef.child(postID).removeValue()
-                    } else {
+                    } else if (!isSavedInFirebase && shouldBeSavedInFirebase) {
                         savedPostsRef.child(postID).setValue(true)
+                    } else {
+                        return
                     }
 
                     operation.addOnCompleteListener { task ->
-                        Log.d("BlogAdapter", "Save transaction onComplete: postID=$postID, position=$position, task.isSuccessful=${task.isSuccessful}")
-                        if (task.isSuccessful && position != RecyclerView.NO_POSITION) {
-                            items[position].saved = !isSaved
-                            notifyItemChanged(position)
-                            updateSaveButtonIcon(!isSaved)
+                        //Log.d("BlogAdapter", "Save transaction onComplete: postID=$postID, position=<span class="math-inline">position, task\.isSuccessful\=</span>{task.isSuccessful}")
+                        if (task.isSuccessful) {
                             Toast.makeText(
                                 context,
-                                if (isSaved) "Blog unsaved" else "Blog saved",
+                                if (shouldBeSavedInFirebase) "Blog saved" else "Blog unsaved",
                                 Toast.LENGTH_SHORT
                             ).show()
                         } else {
+                            items[position].saved = !items[position].saved
+                            updateSaveButtonIcon(items[position].saved)
+                            notifyItemChanged(position)
                             Toast.makeText(
                                 context,
-                                "Failed to ${if (isSaved) "unsave" else "save"}",
+                                "Failed to ${if (shouldBeSavedInFirebase) "save" else "unsave"}",
                                 Toast.LENGTH_SHORT
                             ).show()
                         }
@@ -190,25 +196,19 @@ class BlogAdapter(private val items: MutableList<BlogItemModel>) :
                 }
 
                 override fun onCancelled(error: DatabaseError) {
-                    Log.e("BlogAdapter", "Save transaction onCancelled: postID=$postID, position=$position, error=${error.message}")
+                    //Log.e("BlogAdapter", "Save transaction onCancelled: postID=$postID, position=<span class="math-inline">position, error\=</span>{error.message}")
+                    items[position].saved = !items[position].saved
+                    updateSaveButtonIcon(items[position].saved)
+                    notifyItemChanged(position)
                     Toast.makeText(context, "Error: ${error.message}", Toast.LENGTH_SHORT).show()
                 }
             })
         }
 
         private fun updateSaveButtonIcon(isSaved: Boolean) {
-            if (isSaved) {
-                Log.d("BlogViewHolder", "updateSaveButtonIcon: setting to RED")
-                binding.postsaveButton.setImageResource(R.drawable.save_articles_fill_red)
-                // If you want to change the text color of a TextView associated with the button, do it here
-                // For example, if you have a TextView within the button's layout:
-                // binding.buttonTextView.setTextColor(context.resources.getColor(R.color.red, context.theme))
-            } else {
-                Log.d("BlogViewHolder", "updateSaveButtonIcon: setting to BLACK")
-                binding.postsaveButton.setImageResource(R.drawable.unsave_articles_black)
-                // And here for the default color
-                // binding.buttonTextView.setTextColor(context.resources.getColor(R.color.black, context.theme))
-            }
+            binding.postsaveButton.setImageResource(
+                if (isSaved) R.drawable.save_articles_fill_red else R.drawable.unsave_articles_black
+            )
         }
     }
 
@@ -218,5 +218,4 @@ class BlogAdapter(private val items: MutableList<BlogItemModel>) :
         notifyDataSetChanged()
         Log.d("BlogAdapter", "Updated list with ${items.size} items")
     }
-
 }

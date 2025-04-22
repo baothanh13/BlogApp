@@ -18,6 +18,7 @@ class ReadMoreActivity : AppCompatActivity() {
         binding.backButton1.setOnClickListener {
             finish()
         }
+        //the specific blog post data is received from the Activity that started
         val blogs = intent.getParcelableExtra<BlogItemModel>("blogItem")
         if (blogs != null) {
             binding.titleText.text = blogs.heading
@@ -25,7 +26,6 @@ class ReadMoreActivity : AppCompatActivity() {
             binding.postText.text = blogs.post
             binding.date.text = blogs.date
 
-            // Removed likeCountText binding since we're not displaying it anymore
         } else {
             Toast.makeText(this, "Failed to load blog", Toast.LENGTH_SHORT).show()
         }

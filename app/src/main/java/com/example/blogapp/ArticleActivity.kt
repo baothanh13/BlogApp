@@ -181,14 +181,14 @@ class ArticleActivity : AppCompatActivity(), ArticleAdapter.OnArticleItemClickLi
 
     override fun onEditClick(blogItem: BlogItemModel) {
         // Implement edit functionality
-        Toast.makeText(this, "Edit: ${blogItem.heading}", Toast.LENGTH_SHORT).show()
+        //Toast.makeText(this, "Edit: ${blogItem.heading}", Toast.LENGTH_SHORT).show()
         val intent = Intent(this, EditBlogActivity::class.java)
         intent.putExtra("blogItem", blogItem)
         startActivityForResult(intent,EDIT_BLOG_REQUEST_CODE)
     }
 
     override fun onReadmoreClick(blogItem: BlogItemModel) {
-        Toast.makeText(this, "Read more: ${blogItem.heading}", Toast.LENGTH_SHORT).show()
+        //Toast.makeText(this, "Read more: ${blogItem.heading}", Toast.LENGTH_SHORT).show()
             val intent = Intent(this, ReadMoreActivity::class.java)
             intent.putExtra("blogItem", blogItem)
             startActivity(intent)

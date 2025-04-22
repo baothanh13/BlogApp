@@ -24,7 +24,7 @@ class MainActivity : AppCompatActivity() {
     private val blogList = mutableListOf<BlogItemModel>()
     private lateinit var auth: FirebaseAuth
     private lateinit var blogAdapter: BlogAdapter
-    private var savedPostIds = mutableSetOf<String>() // Store saved post IDs
+    private var savedPostIds = mutableSetOf<String>() // Using a Set ensures that each ID is stored only once, which is efficient for checking if a post is saved.
     private val usersRef = FirebaseDatabase.getInstance("https://blogapp-8582c-default-rtdb.asia-southeast1.firebasedatabase.app")
         .getReference("users")
 
@@ -43,7 +43,7 @@ class MainActivity : AppCompatActivity() {
         // Set default profile image
         binding.imageView2.setImageResource(R.drawable.profile1)
 
-        // Initialize RecyclerView
+        // Initialize RecyclerView,method
         initializeRecyclerView()
 
         // Fetch saved posts for the current user
@@ -60,17 +60,17 @@ class MainActivity : AppCompatActivity() {
         blogAdapter = BlogAdapter(blogList)
         binding.blogRecyclerView.apply {
             adapter = blogAdapter
-            layoutManager = LinearLayoutManager(this@MainActivity)
-            setHasFixedSize(true)
+            layoutManager = LinearLayoutManager(this@MainActivity) //arranges the blog posts vertically.
+            setHasFixedSize(true) //the size of the items won't change dynamically
         }
     }
 
     private fun fetchSavedPosts() {
         auth.currentUser?.uid?.let { userId ->
             usersRef.child(userId).child("savedPosts")
-                .addValueEventListener(object : ValueEventListener {
+                .addValueEventListener(object : ValueEventListener { // listens for changes to the "savedPosts" data.
                     override fun onDataChange(snapshot: DataSnapshot) {
-                        savedPostIds.clear()
+                          savedPostIds.clear()
                         for (postSnapshot in snapshot.children) {
                             postSnapshot.key?.let { savedPostIds.add(it) }
                         }
@@ -116,6 +116,7 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
                 blogList.reverse()
+                //tells the RecyclerView's adapter that the underlying data has changed, and the RecyclerView should re-render its items to reflect these changes on the screen.
                 blogAdapter.notifyDataSetChanged()
             }
 
@@ -135,7 +136,7 @@ class MainActivity : AppCompatActivity() {
                 startActivity(Intent(this, SigninandregistrationActivity::class.java))
             }
         }
-        binding.imageButton.setOnClickListener { // Replace with your actual ImageButton ID!
+        binding.imageButton.setOnClickListener {
             val intent = Intent(this, SavedArticlesActivity::class.java)
             startActivity(intent)
         }

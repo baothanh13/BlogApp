@@ -2,24 +2,42 @@ package com.example.blogapp
 
 import android.content.Intent
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
-import com.example.blogapp.register.WelcomeActivity
+import com.google.firebase.auth.FirebaseAuth
 
 class SplashActivity : AppCompatActivity() {
+
+    private lateinit var auth: FirebaseAuth
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContentView(R.layout.activity_splash)
 
-        Handler(Looper.getMainLooper()).postDelayed({
-            startActivity(Intent(this, WelcomeActivity::class.java))
-            finish() // Đóng SplashActivity
-        }, 6000) // 2000ms = 2 giây
+        // Initialize Firebase Auth
+        auth = FirebaseAuth.getInstance()
+
+        // Check if the user is currently signed in
+        if (auth.currentUser != null) {
+            // User is signed in, go directly to MainActivity
+            startMainActivity()
+        } else {
+
+            startSignInRegistrationActivity()
+        }
+
+        // Finish SplashActivity so the user can't go back to it easily
+        finish()
     }
 
+    private fun startMainActivity() {
+        val intent = Intent(this, MainActivity::class.java)
+        startActivity(intent)
+    }
 
+    private fun startSignInRegistrationActivity() {
+        val intent = Intent(this, SigninandregistrationActivity::class.java)
+        startActivity(intent)
+    }
 }

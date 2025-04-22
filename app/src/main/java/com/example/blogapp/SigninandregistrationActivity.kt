@@ -6,7 +6,7 @@ import android.view.View
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
-import com.example.blogapp.Model.UserData  // Correct import for your UserData model
+import com.example.blogapp.Model.UserData
 import com.example.blogapp.databinding.ActivitySigninandregistrationBinding
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.FirebaseDatabase
@@ -100,7 +100,7 @@ class SigninandregistrationActivity : AppCompatActivity() {
                                     email = registerEmail,
                                     profileImage = ""
                                 )
-
+                                //save dtb to realtime dtb
                                 database.reference.child("users").child(userId).setValue(userData)
                                     .addOnCompleteListener { dbTask ->
                                         if (dbTask.isSuccessful) {

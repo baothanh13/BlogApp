@@ -34,7 +34,8 @@ class AddArticleActivity : AppCompatActivity() {
         initializeFirebase()
         setupClickListeners()
     }
-
+    ///getInstance() returns a new instance of the database object
+    //while getReference() is a reference to an existing instance of the database object.
     private fun initializeFirebase() {
         auth = FirebaseAuth.getInstance()
         val database = FirebaseDatabase.getInstance("https://blogapp-8582c-default-rtdb.asia-southeast1.firebasedatabase.app")
@@ -81,6 +82,7 @@ class AddArticleActivity : AppCompatActivity() {
         val userId = auth.currentUser?.uid ?: return
         showLoading(true)
 
+        //addListenerForSingleValueEvent is used because you only need the user's data at this point in time, not for continuous updates.
         userReference.child(userId).addListenerForSingleValueEvent(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 val userData = snapshot.getValue(UserData::class.java) ?: run {
@@ -89,6 +91,7 @@ class AddArticleActivity : AppCompatActivity() {
                 }
 
                 // Prioritize userData.name, then try auth.currentUser?.displayName
+                // The takeIf { it.isNotEmpty() } is a concise way to check if the userData.name is not empty before using it.
                 val userName = userData.name.takeIf { it.isNotEmpty() } ?: auth.currentUser?.displayName ?: "Anonymous"
                 val profileImageUrl = userData.profileImage ?: ""
                 postNewBlog(title, description, userName, profileImageUrl)
@@ -110,14 +113,14 @@ class AddArticleActivity : AppCompatActivity() {
             post = description,
             userName = userName,
             date = currentDate,
-            authorId = currentUserId, // Important for filtering user's articles
+            authorId = currentUserId,
             likeCount = 0,
             likes = hashMapOf(),
             saved = false,
             profileImageUrl = profileImageUrl
-            // Removed stability parameter as it's not in your BlogItemModel
-        )
 
+        )
+        //adds a new child to the "blogs" node with a unique, time-based key. This ensures that you don't overwrite existing data and that posts are ordered chronologically by default in the database.
         val newPostRef = databaseReference.push()
         blogItem.postID = newPostRef.key ?: "" // Set the generated postID
 
